@@ -425,8 +425,16 @@ void M2Board::tex_write(const Page &p, uint32_t addr, uint32_t lane_data) {
     uint8_t *const base = p.base - ((addr & 0x1fffff) & ~((1u << kPageBits) - 1));
     const uint32_t o = (addr & 0x1fffff) >> 2;
     uint8_t *const w = base + (o >> 1) * 4 + (o & 1) * 2;
+#ifdef M2_DC_MEMORY
+    // One 16-bit store (w is 2-aligned): on the Dreamcast texture RAM is in
+    // video RAM, which takes no byte writes. Flycast accepts them; the
+    // hardware does not (seen on a NAOMI, same PVR and VRAM bus): every
+    // texture drawn as a grid of wrong texels.
+    *reinterpret_cast<volatile uint16_t *>(w) = uint16_t(lane_data);
+#else
     w[0] = uint8_t(lane_data);
     w[1] = uint8_t(lane_data >> 8);
+#endif
     ++tex_generation_; // the hardware renderer re-uploads texture RAM when this moves
 }
 

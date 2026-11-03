@@ -1,5 +1,15 @@
 # Handoff
 
+## Dreamcast port on a NAOMI; texture RAM byte writes (2026-11-03)
+
+The Dreamcast build netboots on a NAOMI 2 (`platform/dreamcast/NAOMI.md`).
+On that hardware every texture was a grid of wrong texels: texture RAM is in
+video RAM on the Dreamcast build and `M2Board::tex_write` wrote it with byte
+stores, which Flycast accepts and the PVR's VRAM bus does not. One 16-bit
+store under `M2_DC_MEMORY`; the desktop build compiles what it did before.
+Speed on the hardware: 37.2 ms a frame (i960 19.2), about 27 frames/s, as in
+Flycast. Details in `platform/dreamcast/HANDOFF.md`.
+
 ## Scenery selection and polygon budget PR branch (2026-10-08)
 
 Branch `scenery-budget` starts from upstream/main `82201ed`, separate from
