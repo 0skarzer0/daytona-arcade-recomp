@@ -220,7 +220,7 @@ private:
     static constexpr unsigned kBuildsPerFrame = 32; // new source textures a frame
     static constexpr unsigned kBanks = 64;          // the PVR's 16-colour palette banks
     static constexpr unsigned kPaletteLuma = 0xf0;  // the material light palettes are shaded at (luma & 0xf0 at most)
-    struct Source { pvr_ptr_t texture; uint32_t w, h, source_w, source_h; };
+    struct Source { pvr_ptr_t texture; uint32_t w, h, source_w, source_h; uint32_t side; bool flip_u, flip_v; };
     struct Material { pvr_poly_hdr_t header; float u_scale, v_scale; };
     struct Entry { uint32_t key; size_t index; const Material *material; }; // (material: set by the materials pass)
 
@@ -273,15 +273,23 @@ private:
     // for it; the buffers are 32-byte aligned (main.cpp's operator new).
     static_assert(rt::Video::kLayerStride == kTexW, "a layer's rows are the texture's");
     void wait_dma() {
+#ifndef _arch_sub_naomi
         const uint64_t t0 = timer_us_gettime64();
         while (!pvr_dma_ready()) thd_pass();
         dma_wait_us += timer_us_gettime64() - t0;
+#endif
     }
 
 public:
     uint64_t dma_wait_us = 0; // microseconds waiting for a layer DMA (inside the draw steps)
 private:
     void upload_layer(const std::vector<uint16_t> &layer, pvr_ptr_t texture) {
+#ifdef _arch_sub_naomi
+        // NAOMI: the PVR DMA never reported its end on the board (the game
+        // hung in wait_dma at the second frame): the store queues instead.
+        pvr_txr_load(layer.data(), texture, size_t(kTexW) * kH * 2);
+        return;
+#endif
         wait_dma(); // one PVR DMA at a time
         if (pvr_txr_load_dma(layer.data(), texture, size_t(kTexW) * kH * 2, false, nullptr, nullptr) < 0)
             pvr_txr_load(layer.data(), texture, size_t(kTexW) * kH * 2); // (not aligned: by the store queues)
@@ -442,6 +450,56 @@ private:
         return nullptr;
     }
 
+    // Twiddled position of (x, y) in an n x n level: y in the even bits, x in
+    // the odd ones.
+    static uint32_t twiddle(uint32_t x, uint32_t y) {
+        uint32_t t = 0;
+        for (uint32_t b = 0; (1u << b) <= (x | y); ++b)
+            t |= ((y >> b) & 1u) << (2 * b) | ((x >> b) & 1u) << (2 * b + 1);
+        return t;
+    }
+
+    // texels_ (s.w x s.h) to a square mipmapped texture in video RAM. A level
+    // below takes one texel of each 2x2 (the palette is per material, so the
+    // indices cannot be averaged), alternating which, against a regular grid.
+    void build_mipmaps(const Source &s, bool mirror_u, bool mirror_v, size_t bytes) {
+        const uint32_t n = s.side;
+        uint8_t *cur = level_[0], *next = level_[1];
+        for (uint32_t y = 0; y < n; ++y) {
+            uint32_t sy = y % s.h;
+            if (mirror_v && (y / s.h) & 1) sy = s.h - 1 - sy;
+            for (uint32_t x = 0; x < n; ++x) {
+                uint32_t sx = x % s.w;
+                if (mirror_u && (x / s.w) & 1) sx = s.w - 1 - sx;
+                const uint32_t i = sx + sy * s.w;
+                cur[x + y * n] = (texels_[i >> 1] >> ((i & 1) * 4)) & 0x0f;
+            }
+        }
+        std::memset(mip_, 0, bytes);
+        size_t offset = 3;
+        for (uint32_t m = 1; m < n; m *= 2) offset += size_t(m) * m;
+        for (uint32_t m = n;; m /= 2) {
+            for (uint32_t y = 0; y < m; ++y)
+                for (uint32_t x = 0; x < m; ++x) {
+                    const size_t t = offset + twiddle(x, y);
+                    mip_[t >> 1] |= uint8_t(cur[x + y * m] << ((t & 1) * 4));
+                }
+            if (m == 1) { // (said to be at texel 3; the first two bytes all of it, whichever nibble is read)
+                mip_[0] = mip_[1] = uint8_t(cur[0] * 0x11);
+                break;
+            }
+            const uint32_t h = m / 2;
+            for (uint32_t y = 0; y < h; ++y)
+                for (uint32_t x = 0; x < h; ++x) {
+                    const uint32_t ox = (x + y) & 1, oy = y & 1;
+                    next[x + y * h] = cur[(2 * x + ox) + (2 * y + oy) * m];
+                }
+            std::swap(cur, next);
+            offset -= size_t(h) * h;
+        }
+        pvr_txr_load(mip_, s.texture, bytes);
+    }
+
     const Source *source_for(const rt::GeoPoly &poly, const rt::VideoMem &mem) {
         const uint32_t key = uint32_t(poly.texheader[0] & 0x23ff) | uint32_t(poly.texheader[2] & 0x1fff) << 16;
         auto found = sources_.find(key);
@@ -453,7 +511,18 @@ private:
         const uint32_t step_x = std::max(1u, s.source_w / kTextureLimit), step_y = std::max(1u, s.source_h / kTextureLimit);
         s.w = s.source_w / step_x;
         s.h = s.source_h / step_y;
-        s.texture = allocate(size_t(s.w) * s.h / 2);
+        // Square for the mipmaps (the PVR mipmaps only square textures): the
+        // short side repeated; a mirrored axis repeated as copy, mirror, ...
+        // (its flip then off: the texture holds it).
+        s.side = std::max(s.w, s.h);
+        s.flip_u = ((poly.texheader[0] >> 8) & 1) && s.w == s.side;
+        s.flip_v = ((poly.texheader[0] >> 9) & 1) && s.h == s.side;
+        const bool mirror_u = ((poly.texheader[0] >> 8) & 1) && !s.flip_u;
+        const bool mirror_v = ((poly.texheader[0] >> 9) & 1) && !s.flip_v;
+        size_t mip_texels = 3;
+        for (uint32_t n = 1; n <= s.side; n *= 2) mip_texels += size_t(n) * n;
+        const size_t mip_bytes = ((mip_texels + 1) / 2 + 31) & ~size_t(31);
+        s.texture = allocate(mip_bytes);
         if (!s.texture) return nullptr;
         ++builds_;
         const uint32_t bx = 32u * (poly.texheader[2] & 0x3f);
@@ -465,7 +534,7 @@ private:
                 const rt::TexelQuad q = rt::read_texel_quad(bx, by, x * step_x, x * step_x, y * step_y, y * step_y, sheet);
                 texels_[(x + y * s.w) >> 1] |= uint8_t(((q.t00 >> 4) & 0x0f) << ((x & 1) * 4));
             }
-        pvr_txr_load_ex(texels_, s.texture, s.w, s.h, PVR_TXRLOAD_4BPP);
+        build_mipmaps(s, mirror_u, mirror_v, mip_bytes);
         return &sources_.emplace(key, s).first->second;
     }
 
@@ -504,15 +573,18 @@ private:
             for (unsigned i = 0; i < 16; ++i) pvr_set_pal_entry(bank * 16 + i, texel_grey(poly, mem, i));
         }
         pvr_poly_cxt_t cxt;
-        pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_PAL4BPP | PVR_TXRFMT_4BPP_PAL(bank), int(source->w),
-                         int(source->h), source->texture, PVR_FILTER_BILINEAR);
+        pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_PAL4BPP | PVR_TXRFMT_4BPP_PAL(bank), int(source->side),
+                         int(source->side), source->texture, PVR_FILTER_BILINEAR);
         unordered(cxt);
+        // Mipmapped: without, the far textures shimmer in a grid on a real PVR.
+        cxt.txr.mipmap = PVR_MIPMAP_ENABLE;
         // The CPU masks texture coordinates (repeat); the header's mirror bits flip.
-        cxt.txr.uv_flip = (((poly.texheader[0] >> 8) & 1) ? PVR_UVFLIP_U : 0) | (((poly.texheader[0] >> 9) & 1) ? PVR_UVFLIP_V : 0);
+        cxt.txr.uv_flip = pvr_uv_flip_t((source->flip_u ? PVR_UVFLIP_U : 0) | (source->flip_v ? PVR_UVFLIP_V : 0));
         Material m;
         pvr_poly_compile(&m.header, &cxt);
-        m.u_scale = 1.0f / (8.0f * float(source->source_w));
-        m.v_scale = 1.0f / (8.0f * float(source->source_h));
+        // (source_w texels in s.w; the square holds side / s.w copies)
+        m.u_scale = 1.0f / (8.0f * float(source->source_w) * float(source->side / source->w));
+        m.v_scale = 1.0f / (8.0f * float(source->source_h) * float(source->side / source->h));
         const Material *made = &materials_.emplace(key, m).first->second;
         slot = {key, colour_stamp_, made};
         return made;
@@ -554,7 +626,7 @@ private:
         for (int s = 1; s < n; s++) strip[s] = (s & 1) ? lo++ : hi--;
         for (int k = 0; k < n; k++) {
             const Vertex &in = v[strip[k]];
-            pvr_vertex_t *out = pvr_dr_target(dr_);
+            pvr_vertex_t *out = static_cast<pvr_vertex_t *>(pvr_dr_target(dr_));
             out->flags = k == n - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX;
             out->x = in.x;
             out->y = in.y;
@@ -583,6 +655,10 @@ private:
     uint64_t back_uploaded_ = ~0ull, front_uploaded_ = ~0ull; // the layers' generations in video RAM
     bool clear_row_[kH] = {}; // front layer rows all see-through in video RAM
     alignas(32) uint8_t texels_[kTextureLimit * kTextureLimit / 2] = {};
+    // A mipmapped texture: the 1x1 level at texel 3, then 2x2, 4x4, ... up
+    // to the full size, each twiddled, 4 bits a texel.
+    alignas(32) static inline uint8_t mip_[(kTextureLimit * kTextureLimit * 4 / 3 + 8) / 2 + 32] = {}; // (static: the renderer is on a stack)
+    alignas(32) static inline uint8_t level_[2][kTextureLimit * kTextureLimit] = {};
     std::vector<Entry> order_, order_tmp_;
     std::unordered_map<uint32_t, Source> sources_;
     std::unordered_map<uint64_t, Material> materials_;

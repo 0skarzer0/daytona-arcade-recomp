@@ -18,6 +18,9 @@
 #include "renderer.h"
 
 #include <kos.h>
+#ifdef _arch_sub_naomi
+#include "naomi.h"
+#endif
 
 #include <algorithm>
 #include <cinttypes>
@@ -37,11 +40,26 @@ extern "C" void *sbrk(ptrdiff_t increment); // newlib's; not declared under stri
 mutex_t g_print = MUTEX_INITIALIZER;
 uint64_t g_say_us = 0; // microseconds in say (PROFILE waits)
 void say(const char *format, ...) __attribute__((format(printf, 1, 2)));
+#ifdef _arch_sub_naomi
+// NAOMI: no serial cable on a cabinet. The last lines are kept so that a
+// failure or a hang can be shown on the screen (naomi_show_log).
+char g_log[32][96];
+int g_log_n = 0;
+#endif
 void say(const char *format, ...) {
     const uint64_t t0 = timer_us_gettime64();
     const bool locked = mutex_lock_timed(&g_print, 200) == 0;
     va_list args;
     va_start(args, format);
+#ifdef _arch_sub_naomi
+    {
+        va_list copy;
+        va_copy(copy, args);
+        std::vsnprintf(g_log[g_log_n % 32], sizeof(g_log[0]), format, copy);
+        va_end(copy);
+        g_log_n++;
+    }
+#endif
     std::vprintf(format, args);
     va_end(args);
     if (locked) mutex_unlock(&g_print);
@@ -68,9 +86,18 @@ void operator delete(void *p, size_t) noexcept { std::free(p); }
 
 namespace {
 
+#ifdef _arch_sub_naomi
+// NAOMI: the images are in the NetDIMM after the program (naomi.h), and main
+// RAM is 32 MB: a 12 MB ROM page cache instead of 2.
+constexpr const char *kRomDir = "/dimm/rom";
+constexpr size_t kCachePages = 3072;
+constexpr uintptr_t kRamEnd = 0x8e000000u;
+#else
 constexpr const char *kRomDir = "/cd/rom"; // the importer's images, on the disc built locally
-constexpr size_t kGameStack = 512 * 1024;
 constexpr size_t kCachePages = 512; // 2 MB of ROM pages
+constexpr uintptr_t kRamEnd = 0x8d000000u;
+#endif
+constexpr size_t kGameStack = 512 * 1024;
 constexpr size_t kVertexBuffer = 448 * 1024; // the busiest frame: 2,182 polygons, ~340 KB with a header each
 // kDrawEvery (frames per picture: 1 every frame, 2, 3 or 4) is in inputs.h,
 // from build_dreamcast.py --draw-every.
@@ -197,7 +224,7 @@ void parse_script(const char *text, tools::Script &script) {
 // (the heap grows up to the end of the 16 MB).
 double free_mb() {
     const uintptr_t brk = reinterpret_cast<uintptr_t>(sbrk(0));
-    return (mallinfo().fordblks + (0x8d000000u - brk)) / 1048576.0;
+    return (mallinfo().fordblks + (kRamEnd - brk)) / 1048576.0;
 }
 
 // What the game thread is doing, for the watchdog on the main thread.
@@ -211,6 +238,26 @@ volatile int g_running = 0; // 1 while GameLoop::run_frame runs
 char g_report[240 * 24 + 96];
 volatile bool g_report_ready = false;
 
+#ifdef _arch_sub_naomi
+volatile bool g_pvr_up = false;
+// The PVR off and the last lines of the log on the screen, for good.
+[[noreturn]] void naomi_show_log(const char *why) {
+    if (g_pvr_up) pvr_shutdown();
+    vid_init(DM_640x480, PM_RGB565);
+    vid_clear(0, 0, 64);
+    dbgio_dev_select("fb");
+    std::printf("\n DAYTONA USA (NAOMI) - %s\n\n", why);
+    const int first = g_log_n > 26 ? g_log_n - 26 : 0;
+    for (int i = first; i < g_log_n; i++) {
+        char line[80];
+        std::snprintf(line, sizeof(line), "%s", g_log[i % 32]);
+        std::printf(" %s", line);
+        if (!std::strchr(line, '\n')) std::printf("\n");
+    }
+    for (;;) thd_sleep(1000);
+}
+#endif
+
 void *run_game(void *) {
     try {
         say("GAME start, heap %.2f MB\n", heap_mb());
@@ -223,6 +270,12 @@ void *run_game(void *) {
         pvr_init_params_t params = {{PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0},
                                     kVertexBuffer, 0, 0, 1, 1, 0};
         pvr_init(&params);
+#ifdef _arch_sub_naomi
+        g_pvr_up = true;
+        // From here the log only goes to the buffer (shown on a failure or a
+        // hang): text drawn over the game cost ~2 ms a frame and showed through.
+        dbgio_dev_select("null");
+#endif
         say("GAME PVR ready, video RAM free %.2f MB\n", pvr_mem_available() / 1048576.0);
         // Texture RAM (tex0, tex1, 4 MB) in video RAM: main RAM is too small
         // for it as well. The game's writes reach only the first 1 MB of each
@@ -294,6 +347,15 @@ void *run_game(void *) {
             std::copy(eeprom.begin(), eeprom.end(), game.board().io().eeprom.begin());
         if (backup.size() == game.board().backup_ram().size())
             std::copy(backup.begin(), backup.end(), game.board().backup_ram().begin());
+#ifdef _arch_sub_naomi
+        // The settings saved on this board win over the defaults from the image
+        naomi::Controls cabinet;
+        naomi::Sram sram;
+        auto &ee = game.board().io().eeprom;
+        auto &bk = game.board().backup_ram();
+        say("GAME settings: %s\n", sram.load(ee.data(), ee.size(), bk.data(), bk.size())
+                                       ? "from the SRAM" : "defaults (nothing valid in the SRAM)");
+#endif
         say("GAME constructed, heap %.2f MB, %.2f MB free\n", heap_mb(), free_mb());
 
         // Frames between PROFILE and GAME frame lines: every 5 s of game time
@@ -308,14 +370,24 @@ void *run_game(void *) {
             if (scripted) {
                 in = script.at(game.board().frame());
             } else {
+#ifdef _arch_sub_naomi
+                const dc::Input c = cabinet.sample();
+                (void)controls;
+#else
                 dc::Pad pad;
                 if (maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_CONTROLLER))
                     if (auto *state = static_cast<cont_state_t *>(maple_dev_status(dev)))
                         pad = {uint32_t(state->buttons), state->joyx, state->ltrig, state->rtrig};
                 const dc::Input c = controls.sample(pad);
+#endif
                 in = {c.steer, c.accel, c.brake, c.in0, c.in1, c.in2};
             }
             game.run_frame(in);
+#ifdef _arch_sub_naomi
+            // Settings / records changed: into the SRAM (every 5 s at most)
+            if (frame % 300 == 0 && sram.save(ee.data(), ee.size(), bk.data(), bk.size()))
+                say("GAME settings saved to the SRAM\n");
+#endif
             {
                 const rt::FrameProfile &fp = game.last_profile();
                 prof_core += fp.core();
@@ -399,6 +471,9 @@ void *run_game(void *) {
         say("GAME DONE\n");
     } catch (const std::exception &e) {
         say("GAME FAILED: %s\n", e.what());
+#ifdef _arch_sub_naomi
+        naomi_show_log("FAILED");
+#endif
     }
     g_done = true;
     return nullptr;
@@ -487,7 +562,13 @@ void sample(kthread_t *game) {
 // reached, and whether it is waiting for the disc.
 int main() {
     std::setvbuf(stdout, nullptr, _IONBF, 0); // every line out at once: a crash must not swallow the last ones
+#ifdef _arch_sub_naomi
+    dbgio_dev_select("fb"); // the log on the screen until the PVR takes over
+#endif
     say("GAME main\n");
+#ifdef _arch_sub_naomi
+    say("GAME NetDIMM files: %d\n", dimmfs_init());
+#endif
     kthread_attr_t attr = {};
     attr.stack_size = kGameStack;
     attr.prio = PRIO_DEFAULT;
@@ -498,8 +579,22 @@ int main() {
         return 1;
     }
     if (kSample) sample(game);
+#ifdef _arch_sub_naomi
+    int last_frame = -1, stuck = 0;
+#endif
     while (!g_done) {
         thd_sleep(5000);
+#ifdef _arch_sub_naomi
+        // No frame for 20 s: a hang. Show where (the log and the game
+        // thread's pc / pr for addr2line on game.elf).
+        stuck = g_frame == last_frame ? stuck + 1 : 0;
+        last_frame = g_frame;
+        if (stuck >= 4) {
+            say("GAME HANG at frame %d, pc %08lx pr %08lx, %s\n", g_frame, (unsigned long)game->context.pc,
+                (unsigned long)game->context.pr, g_running ? "running the frame" : "between frames");
+            naomi_show_log("HANG");
+        }
+#endif
         DiscRom *rom = g_rom;
         dc::Renderer *renderer = g_renderer;
         say("GAME alive: frame %d, heap %.2f MB, %.2f MB free, ROM misses %llu, %s%s\n", g_frame, heap_mb(),

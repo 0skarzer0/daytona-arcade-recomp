@@ -21,7 +21,11 @@ INT32 := -U__INT32_TYPE__ -D__INT32_TYPE__=int -U__UINT32_TYPE__ '-D__UINT32_TYP
 
 # The desktop build's floating-point rules: exact rounding, no contraction.
 # -MMD: header dependencies, so a changed runtime header rebuilds its users.
-CXXFLAGS := -std=c++20 -O2 -g -fno-fast-math -ffp-contract=off -Wall -Wextra -MMD -MP $(INT32) -I$(ROOT)/src
+# NAOMI build's toolchain (kos-chain GCC 15.2 / newlib 4.6): its libstdc++
+# was configured without the C99 stdio/stdlib macros, which hides
+# std::snprintf, std::strtoull, std::to_string; newlib has them all.
+C99FIX := -D_GLIBCXX11_USE_C99_STDIO=1 -D_GLIBCXX11_USE_C99_STDLIB=1
+CXXFLAGS := -std=gnu++20 $(C99FIX) -O2 -g -fno-fast-math -ffp-contract=off -Wall -Wextra -MMD -MP $(INT32) -I$(ROOT)/src
 -include $(wildcard $(OUT)/*/*.d $(OUT)/game/*/*.d)
 # The compiler is a Windows program on DreamSDK: it writes C:/... paths in the
 # .d files, which this make cannot use (the colon), so header changes did not
@@ -119,8 +123,15 @@ game.cdi: $(OUT)/game.cdi
 $(OUT)/game/main.o: $(ROOT)/platform/dreamcast/game/main.cpp
 	@mkdir -p $(dir $@)
 	kos-c++ $(O3FLAGS) $(GAME_DEFS) -I$(OUT)/game -c $< -o $@ && $(FIXDEP)
-$(OUT)/game.elf: $(OUT)/game/main.o $(GAME_LIBS)
-	kos-c++ -o $@ $< -Wl,--start-group $(GAME_LIBS) -Wl,--end-group
+# SEGA NAOMI (KOS_SUBARCH=naomi): the NetDIMM file system (game/naomi.h).
+ifeq ($(KOS_SUBARCH),naomi)
+NAOMI_OBJ := $(OUT)/game/naomi_dimmfs.o
+$(OUT)/game/naomi_dimmfs.o: $(ROOT)/platform/dreamcast/game/naomi_dimmfs.c
+	@mkdir -p $(dir $@)
+	kos-cc -O2 -Wall -c $< -o $@
+endif
+$(OUT)/game.elf: $(OUT)/game/main.o $(NAOMI_OBJ) $(GAME_LIBS)
+	kos-c++ -o $@ $< $(NAOMI_OBJ) -Wl,--start-group $(GAME_LIBS) -Wl,--end-group
 
 # The game's disc also carries rom/: the importer's images (ROMS, the host
 # build's rom_cache/daytona) and the settings EEPROM and backup RAM (NVRAM),

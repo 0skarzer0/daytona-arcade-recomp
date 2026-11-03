@@ -16,6 +16,22 @@
 - Proof of concept in Flycast first; the console after that. Floating-point
   and speed results from Flycast are stated as Flycast results.
 
+## NAOMI build and first hardware results (2026-11-03)
+
+The port runs on a NAOMI 2 with a NetDIMM (`NAOMI.md`): attract, test mode,
+coin-up, a race, settings in the SRAM. About 27 frames/s (37.2 ms a frame,
+19.2 of it the i960), as in Flycast: the CPU is the limit, not the disc.
+
+Found on the hardware, not in Flycast:
+- Texture RAM is in video RAM and took byte writes from `tex_write`: every
+  texture a grid of wrong texels. Fixed with one 16-bit store under
+  `M2_DC_MEMORY`. Expect the same on a Dreamcast.
+- `pvr_txr_load_dma` for the tile layers never completed on the NAOMI; it
+  uses `pvr_txr_load` there.
+
+What not to re-propose: mipmaps or filtering as the cause of that grid (tried
+first; the grid stayed until the texture RAM writes were fixed).
+
 ## Current state (2026-10-03, overnight)
 
 **A whole recorded race runs in Flycast, in lockstep with the desktop**:
