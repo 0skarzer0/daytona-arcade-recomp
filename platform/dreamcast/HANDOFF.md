@@ -39,7 +39,8 @@ the NetDIMM through the cartridge port with 16-bit PIO. Next step: per-frame
 maximums in the PROFILE lines and a cache miss count.
 
 Report for upstream: `NAOMI_ISSUE.md` (title and text of the issue for
-alphanu1/daytona-arcade-recomp). Not posted yet; once it is, add its link
+alphanu1/daytona-arcade-recomp). Not posted yet: first analyse the video
+of the stalls (coming) and add what it shows. Once posted, add its link
 here and record the reply.
 
 ## Current state (2026-10-03, overnight)
