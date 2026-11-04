@@ -38,6 +38,10 @@ Not diagnosed. First suspect: bursts of ROM page cache misses, each read from
 the NetDIMM through the cartridge port with 16-bit PIO. Next step: per-frame
 maximums in the PROFILE lines and a cache miss count.
 
+Report for upstream: `NAOMI_ISSUE.md` (title and text of the issue for
+alphanu1/daytona-arcade-recomp). Not posted yet; once it is, add its link
+here and record the reply.
+
 ## Current state (2026-10-03, overnight)
 
 **A whole recorded race runs in Flycast, in lockstep with the desktop**:
