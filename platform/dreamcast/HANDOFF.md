@@ -32,6 +32,12 @@ Found on the hardware, not in Flycast:
 What not to re-propose: mipmaps or filtering as the cause of that grid (tried
 first; the grid stayed until the texture RAM writes were fixed).
 
+Open on the hardware: every so often the game nearly stops for a while (1-2
+frames/s), then recovers. The 27 frames/s above is an average and hides it.
+Not diagnosed. First suspect: bursts of ROM page cache misses, each read from
+the NetDIMM through the cartridge port with 16-bit PIO. Next step: per-frame
+maximums in the PROFILE lines and a cache miss count.
+
 ## Current state (2026-10-03, overnight)
 
 **A whole recorded race runs in Flycast, in lockstep with the desktop**:
