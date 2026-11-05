@@ -38,12 +38,9 @@ Not diagnosed. First suspect: bursts of ROM page cache misses, each read from
 the NetDIMM through the cartridge port with 16-bit PIO. Next step: per-frame
 maximums in the PROFILE lines and a cache miss count.
 
-Report for upstream: `NAOMI_ISSUE.md` (title and text of the issue for
-alphanu1/daytona-arcade-recomp). Not posted yet: first analyse the video
-of the stalls (done 2026-11-05: race timed with the lap timer, about 13
-game frames/s at best, 5-8 with many cars on screen; the 27 frames/s
-PROFILE average hides it). Once posted, add its link
-here and record the reply.
+Report for upstream: `NAOMI_ISSUE.md`, posted as an issue on
+alphanu1/daytona-arcade-recomp on 2026-11-05 (add its link and record the
+reply here).
 
 ## Current state (2026-10-03, overnight)
 
