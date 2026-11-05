@@ -40,9 +40,19 @@ Attract mode and a race with `kDrawEvery` 2, from the PROFILE lines (the on-scre
 - **Draw, per drawn frame:** sort+wait 3.5, materials 2.6, polygons 3.2, layer upload wait 0.0.
 - **i960 frame wait:** skipped 77% of the i960's instructions.
 
-That is about 27 game frames a second against the arcade's 57.5, so it plays at roughly half speed. That is the same as in Flycast (27–32 fps), so the emulator's speed figures look representative of the hardware. The i960 core is the limit. ROM reads are under 1 ms per frame here because the NAOMI's 32 MB RAM allows a 12 MB ROM page cache, so on a Dreamcast with its 2 MB cache, disc reads will add to that.
+That works out at about 27 game frames a second against the arcade's 57.5, the same as in Flycast (27–32 fps). The i960 core is the limit. ROM reads are under 1 ms per frame here because the NAOMI's 32 MB RAM allows a 12 MB ROM page cache, so on a Dreamcast with its 2 MB cache, disc reads will add to that.
 
-Those figures are averages, though. Every so often the game nearly stops for a while, at 1–2 frames a second, and then recovers. I haven't found the cause yet. My first suspect is ROM page cache misses: each miss is read from the NetDIMM through the cartridge port with 16-bit PIO, and a burst of misses (a new section of the track, for example) could explain it. Per-frame maximums rather than averages, plus a count of cache misses, should show whether that is it.
+**In a race it is much slower than that average.** I filmed a Beginner race on the cabinet and timed it with the game's own lap timer:
+
+| Part of the race | Real time | Lap timer advanced | Slower than the arcade by | About |
+|---|---:|---:|---:|---:|
+| Start, 40 cars on screen | 32 s | 4.2 s | 7.7× | 7 game frames/s |
+| Mid lap | 46 s | 10.4 s | 4.4× | 13 frames/s |
+| Mid lap | 24 s | 5.5 s | 4.3× | 13 frames/s |
+| Approaching the checkpoint | 10 s | 1.4 s | 7× | 8 frames/s |
+| At the checkpoint | 10 s | 0.9 s | 11× | 5 frames/s |
+
+So even the best stretches run at about 13 game frames a second, and it drops to 5–8 when there is a lot on screen (the rolling start with the whole field, the checkpoint area). Earlier sessions also showed short near-stops at 1–2 frames a second. The figures in the table above come from attract mode and do not show this; I'll add per-frame maximums to the PROFILE output to see which part grows (i960, TGP or ROM page cache misses read through the cartridge port with 16-bit PIO). The video is available if it helps.
 
 ### Other things on the branch (all behind `_arch_sub_naomi` except the last two)
 
