@@ -5,6 +5,9 @@
 #ifdef NATIVE_DISC
 #include <kos/dbgio.h>
 #endif
+#ifdef NM_NAOMI
+#include "../naomi/naomi.h" /* make NATIVE_NAOMI=1: NAOMI / NAOMI 2 with a NetDIMM (naomi/README.md) */
+#endif
 #include "practice.h"
 #include "render/materials/palette_ram.h"
 #ifndef NM_ASSET_ROOT /* make NATIVE_ASSET_ROOT=..., /cd/ with NATIVE_DISC=1 (local.cfg.mk) */
@@ -70,6 +73,9 @@ int main(void) {
      * 115200 baud (a long report line about 10 ms). make NATIVE_DISC_CONSOLE=1 keeps it (a serial cable, Flycast). */
     dbgio_dev_select("null");
 #endif
+#ifdef NM_NAOMI
+    if(nm_naomi_boot()) return 1;
+#endif
     if(nm_startup_check()) return 1;
     if (!check_math()) {
         puts("FAIL: SH4ZAM scale check");
@@ -122,6 +128,9 @@ int main(void) {
     enj_state_get()->video.pixel_mode = PM_RGB565;
 #endif
     if (enj_state_startup() != 0) return 1;
+#ifdef NM_NAOMI
+    nm_naomi_pvr_up();
+#endif
     /* Palette RAM format (render/materials/palette_ram.h; make NATIVE_PAL16):
      * the register decides how each entry is stored, so it is set once here,
      * before any scene writes a palette entry, and never again. */
@@ -175,5 +184,11 @@ int main(void) {
 #endif
     printf("Native FSAA: %d, horizontal vertex scale=%d\n",ENJ_FSAA,ENJ_XSCALE);
     vid_set_dithering(false);
+#ifdef NM_NAOMI
+    /* A cabinet has no loader to return to: a failure stays on the screen with the console's last lines. */
+    const int result = nm_practice_run(NM_ASSET_ROOT);
+    nm_naomi_show_log(result ? "FAILED" : "THE GAME ENDED");
+#else
     return nm_practice_run(NM_ASSET_ROOT);
+#endif
 }

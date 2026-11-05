@@ -1,5 +1,40 @@
 ENJ_BASENAME := daytona-native
 ENJ_CFLAGS += -I$(abspath include)
+# NATIVE_NAOMI=1 (ELF suffix -naomi): a SEGA NAOMI / NAOMI 2 with a NetDIMM, netbooted (naomi/README.md). Needs
+#   KallistiOS built with KOS_SUBARCH=naomi (its environ.sh sourced after enDjinn's). The assets are read from /dimm,
+#   an archive appended to the netboot image (naomi/naomi_pack.py; reads through the cartridge port hold the CPU, as
+#   dcload's /pc does, so the loaders take the /pc paths); the cabinet's JVS controls become port A's pad
+#   (naomi/naomi_input.c, enj_ctrl_map_states and enj_ctrl_get_states wrapped at link time outside the LTO unit, as
+#   NATIVE_PAD_MONKEY does); the save file goes to the board's SRAM (naomi/naomi_save.c); the console to a ring of
+#   lines shown on the screen after a failure or a hang (naomi/naomi_log.c). The wheel is read linearly: steer curve
+#   1, dead zone 2 unless set. Then: make ... NATIVE_NAOMI=1 naomi (the netboot image, naomi/README.md).
+ifeq ($(NATIVE_NAOMI),1)
+ifneq ($(KOS_SUBARCH),naomi)
+$(error NATIVE_NAOMI=1 needs KallistiOS built and sourced with KOS_SUBARCH=naomi (now: $(KOS_SUBARCH)))
+endif
+ifdef NATIVE_DISC
+$(error NATIVE_NAOMI reads its assets from the NetDIMM, not from a disc)
+endif
+ifeq ($(NATIVE_PAD_MONKEY),1)
+$(error NATIVE_NAOMI and NATIVE_PAD_MONKEY both wrap enDjinn's pad calls)
+endif
+NATIVE_ASSET_ROOT ?= /dimm/
+ifneq ($(filter /pc% /cd%,$(NATIVE_ASSET_ROOT)),)
+$(error NATIVE_NAOMI reads its assets from /dimm, not $(NATIVE_ASSET_ROOT))
+endif
+NATIVE_STEER_CURVE ?= 1.0
+NATIVE_STEER_DEADZONE ?= 2
+ROMBASEPATH := $(ENJ_ROMDIR)
+ENJ_BASENAME := $(ENJ_BASENAME)-naomi
+ENJ_CFLAGS += -DNM_NAOMI
+NAOMI_OBJS := $(addprefix $(ENJ_BUILDDIR)/naomi/,naomi_log.o naomi_input.o naomi_save.o naomi_dimmfs.o)
+OBJS += $(NAOMI_OBJS)
+$(NAOMI_OBJS): DEFINES += -fno-lto
+$(ENJ_BUILDDIR)/enDjinn/code/enj_ctrl.o: DEFINES += -fno-lto
+ENJ_LDFLAGS += -Wl,--wrap=enj_ctrl_get_states -Wl,--wrap=enj_ctrl_map_states
+else ifneq ($(filter-out 0,$(NATIVE_NAOMI)),)
+$(error NATIVE_NAOMI must be 0 or 1)
+endif
 # Native title data is a separate, bounded PAL4 pack. It is embedded so the
 # title can replace the released race assets without a filesystem dependency.
 TITLE_SCENE_DIR ?= ../../build/dc-native-timing.Xsmcer/prepared

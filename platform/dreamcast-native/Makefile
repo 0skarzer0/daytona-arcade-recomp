@@ -189,3 +189,18 @@ endif
 .PHONY: check-queue
 check-queue:
 	python3 tests/test_endjinn_deferred_queue.py "$(ENDJINN_ROOT)"
+
+# make ... NATIVE_NAOMI=1 naomi: the netboot image for a NAOMI / NAOMI 2 with a NetDIMM (naomi/README.md). The ELF
+# goes into a NAOMI ROM header (KOS's naomibintool), the asset set (ENJ_ROMDIR) is appended as the /dimm archive
+# (naomi/naomi_pack.py) and the result is gzipped for the WiPi netbooter. NAOMI_TITLE is the name the BIOS shows.
+NAOMI_TITLE ?= DAYTONA USA NATIVE
+NAOMI_BINTOOL ?= $(KOS_BASE)/utils/naomibintool/naomibintool
+.PHONY: naomi
+naomi: $(ENJ_BINDIR)/$(ENJ_BASENAME).elf
+ifneq ($(NATIVE_NAOMI),1)
+	$(error the naomi target needs NATIVE_NAOMI=1)
+endif
+	$(NAOMI_BINTOOL) build $(ENJ_BINDIR)/$(ENJ_BASENAME)-prog.bin -t "$(NAOMI_TITLE)" -d "HOMEBREW" -e $<
+	python3 naomi/naomi_pack.py $(ENJ_BINDIR)/$(ENJ_BASENAME)-prog.bin "$(ENJ_ROMDIR)" $(ENJ_BINDIR)/$(ENJ_BASENAME).bin
+	gzip -9 -f $(ENJ_BINDIR)/$(ENJ_BASENAME).bin
+	@echo "Netboot image: $(ENJ_BINDIR)/$(ENJ_BASENAME).bin.gz"

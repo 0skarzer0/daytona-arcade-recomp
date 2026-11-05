@@ -346,7 +346,7 @@ static void voice_init(const char *root) {
     free(raw);
     voice.count = count;
 #ifdef _arch_dreamcast
-    voice.mainloop = !strncmp(root, "/pc", 3);
+    voice.mainloop = !strncmp(root, "/pc", 3) || !strncmp(root, "/dimm", 5); /* both reads hold the CPU */
 #else
     voice.mainloop = voice_force_mainloop;
 #endif
