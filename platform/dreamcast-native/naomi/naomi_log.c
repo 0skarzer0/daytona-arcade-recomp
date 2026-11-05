@@ -15,8 +15,6 @@
 
 #include "naomi.h"
 #include "naomi_dimmfs.h"
-#include "save_store.h"
-#include "game_save.h"
 
 #define LOG_LINES 40
 #define LOG_WIDTH 100
@@ -50,8 +48,6 @@ static int ring_detected(void) { return 1; }
 static int ring_init(void) { return 0; }
 static int ring_shutdown(void) { return 0; }
 static int ring_set_irq_usage(int mode) { (void)mode; return 0; }
-static int ring_read(void) { return -1; }
-static int ring_write(int c) { put_char((char)c); return 1; }
 static int ring_flush(void) { return 0; }
 static int ring_write_buffer(const uint8_t *data, int len, int xlat) {
     (void)xlat;
@@ -68,8 +64,6 @@ static dbgio_handler_t ring = {
     .init = ring_init,
     .shutdown = ring_shutdown,
     .set_irq_usage = ring_set_irq_usage,
-    .read = ring_read,
-    .write = ring_write,
     .flush = ring_flush,
     .write_buffer = ring_write_buffer,
     .read_buffer = ring_read_buffer,
@@ -132,7 +126,6 @@ int nm_naomi_boot(void) {
     const int files = dimmfs_init();
     printf("NAOMI: NetDIMM archive: %d files\n", files);
     if (files <= 0) nm_naomi_show_log("NO ASSETS IN THE NETDIMM IMAGE (naomi/naomi_pack.py)");
-    nm_game_save_device_set((const nm_save_device_t *)nm_naomi_save_device());
     const kthread_attr_t attributes = {.create_detached = true, .stack_size = 8192, .label = "naomi watchdog",
                                        .prio = PRIO_DEFAULT - 1};
     if (!thd_create_ex(&attributes, watchdog, NULL)) printf("NAOMI: no watchdog thread\n");

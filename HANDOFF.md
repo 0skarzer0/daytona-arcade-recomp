@@ -1,5 +1,12 @@
 # Handoff
 
+## Native port on a NAOMI 2 (branch naomi-native, 2026-11-05)
+
+`platform/dreamcast-native` (PR #58) built for a NAOMI / NAOMI 2 with a NetDIMM: `make ... NATIVE_NAOMI=1 naomi` or
+`platform/dreamcast-native/naomi/build_naomi.sh OUTDIR`. Assets from the NetDIMM (`/dimm`), JVS controls as port A's
+pad, the save file in the SRAM, the console on the screen after a failure. Built, not yet run on the cabinet; what to
+test and the environment notes: `platform/dreamcast-native/naomi/HANDOFF.md`.
+
 ## Widescreen opponent visibility (2026-10-14)
 
 Both ROM revisions use enhancement hooks before the opponent car-cell bit test

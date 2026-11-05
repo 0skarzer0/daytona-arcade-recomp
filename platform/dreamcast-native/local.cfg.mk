@@ -25,8 +25,10 @@ endif
 NATIVE_STEER_CURVE ?= 1.0
 NATIVE_STEER_DEADZONE ?= 2
 ROMBASEPATH := $(ENJ_ROMDIR)
-ENJ_BASENAME := $(ENJ_BASENAME)-naomi
 ENJ_CFLAGS += -DNM_NAOMI
+# The port's sources (and SH4ZAM's use in them) test __DREAMCAST__ for "the SH-4 console, not the host"; KOS defines
+# __NAOMI__ instead on a NAOMI. Same CPU, PVR and AICA: defined here too (KOS's own headers do not test it).
+ENJ_CFLAGS += -D__DREAMCAST__
 NAOMI_OBJS := $(addprefix $(ENJ_BUILDDIR)/naomi/,naomi_log.o naomi_input.o naomi_save.o naomi_dimmfs.o)
 OBJS += $(NAOMI_OBJS)
 $(NAOMI_OBJS): DEFINES += -fno-lto
@@ -1239,3 +1241,7 @@ ifneq ($(NATIVE_STEER_DEADZONE),12)
 ENJ_BASENAME := $(ENJ_BASENAME)-steerdz$(NATIVE_STEER_DEADZONE)
 endif
 ENJ_CFLAGS += -DNM_STEER_CURVE=$(NATIVE_STEER_CURVE) -DNM_STEER_DEADZONE=$(NATIVE_STEER_DEADZONE)
+# NATIVE_NAOMI=1 (top of this file): its suffix last, after every assignment of ENJ_BASENAME.
+ifeq ($(NATIVE_NAOMI),1)
+ENJ_BASENAME := $(ENJ_BASENAME)-naomi
+endif

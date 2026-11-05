@@ -18,10 +18,11 @@ index for that cabinet: https://github.com/0skarzer0/naomi-wheel-games.
 | console on dcload or the serial port | a ring of the last 40 lines, shown on the screen after a failure or a hang (`naomi_log.c`) |
 | 16 MB of main RAM | 32 MB (the game uses what it needs; nothing is tuned for the extra RAM yet) |
 
-All of it is behind `NM_NAOMI` (`local.cfg.mk`, `NATIVE_NAOMI=1`). The only changes outside this directory are the
-build option, the `naomi` target in the `Makefile`, three `#ifdef NM_NAOMI` blocks in `code/main.c` and one line in
-`code/audio/sfx.c` (a `/dimm` read holds the CPU like a `/pc` read, so the announcer's phrases take the main-loop path).
-The Dreamcast build compiles what it did before.
+All of it is behind `NM_NAOMI` (`local.cfg.mk`, `NATIVE_NAOMI=1`). Outside this directory: the build option in
+`local.cfg.mk` (which also defines `__DREAMCAST__`, the port's test for "the SH-4 console": KOS defines `__NAOMI__`
+on a NAOMI instead), the `naomi` target in the `Makefile`, three `#ifdef NM_NAOMI` blocks in `code/main.c`, the save
+device in `code/save/game_save.c`, and one line in `code/audio/sfx.c` (a `/dimm` read holds the CPU like a `/pc`
+read, so the announcer's phrases take the main-loop path). The Dreamcast build compiles what it did before.
 
 ### Reads from the NetDIMM
 
@@ -74,23 +75,23 @@ lines (`naomi-ring` dbgio device). The lines are shown on a blue screen when:
 
 ## Building
 
-Two KallistiOS trees at the port's pin (`368a2eb9`): the Dreamcast one for the recipe's tools and assets, a second one
-built with `KOS_SUBARCH=naomi` for the NAOMI ELF (its `environ.sh` sourced after enDjinn's, which sources
-`/opt/toolchains/dc/kos/environ.sh`).
+Two KallistiOS trees at the port's pin (`368a2eb9`): `/opt/toolchains/dc/kos` for the Dreamcast (the recipe and its
+tools) and `/opt/toolchains/dc/kos-naomi`, a copy with `KOS_SUBARCH=naomi` and its own `KOS_BASE` in `environ.sh`,
+for the NAOMI ELF. zlib from kos-ports for both. The ROM set must hold the sound program: MAME's `daytona93` alone
+lacks `epr-16720.7` and `epr-16721.8` (they are in the parent set `daytona`); add them to the zip.
 
 ```sh
-# 1. the assets and the Dreamcast ELFs, as in ../README.md (the recipe needs the Dreamcast KOS)
+# 1. the assets, as in ../README.md
 zsh platform/dreamcast-native/recipes/build_assets.sh roms/daytona93.zip build/my-assets \
     --music ~/Downloads/Daytona_USA_\(Sega_Model_2\).zip
-# 2. the NAOMI ELF and the netboot image against those assets
-source extern/endjinn/environ.sh
-source /opt/toolchains/dc/kos-naomi/environ.sh      # KOS_SUBARCH=naomi
-make -C platform/dreamcast-native $(grep -v '^#' build/my-assets/make-vars.txt) NATIVE_NAOMI=1 \
-    ENJ_BUILDDIR=build-naomi naomi
+# 2. the NAOMI ELF and its netboot image against them (options of the recipe's "play" ELF + NATIVE_NAOMI=1)
+zsh platform/dreamcast-native/naomi/build_naomi.sh build/my-assets
 ```
 
-The image is `platform/dreamcast-native/bin/daytona-native-naomi-....bin.gz`; the asset set (`assets-ssfar4f`) is
-inside it. Copy it to the WiPi netbooter's games folder and add a line to its `romsinfo.csv`.
+Output: `build/my-assets/elf/naomi/bin/daytona-native-...-naomi.bin.gz` (the asset set `assets-ssfar4f` inside it: a
+ROM-derived file, not for sharing) and the `.elf` beside it. Copy the `.bin.gz` to the WiPi netbooter and add its line
+to `romsinfo.csv`. `HANDOFF.md` has the environment notes (toolchain without the GNU mirrors, Clang for the host
+tools, memory for the lockstep checks).
 
 ## Status
 
