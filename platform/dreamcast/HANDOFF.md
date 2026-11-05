@@ -38,9 +38,16 @@ Not diagnosed. First suspect: bursts of ROM page cache misses, each read from
 the NetDIMM through the cartridge port with 16-bit PIO. Next step: per-frame
 maximums in the PROFILE lines and a cache miss count.
 
-Report for upstream: `NAOMI_ISSUE.md`, posted as an issue on
-alphanu1/daytona-arcade-recomp on 2026-11-05 (add its link and record the
-reply here).
+Report for upstream: `NAOMI_ISSUE.md`, posted as
+https://github.com/alphanu1/daytona-arcade-recomp/issues/62 on 2026-11-05.
+Reply (alphanu1, 2026-11-05 18:32 UTC): "New native SH-4 port will be
+committed soon. Please test that". The same minute upstream merged PR #58
+(dfchil), `platform/dreamcast-native/`: the game rewritten in C for the
+SH-4, bit-exact to the recompiled game, PVR-native drawing, AICAflow sound,
+60 frames/s on a Dreamcast, from `daytona93` (Deluxe '93). Next step: a NAOMI
+build of that port (branch `naomi-native`): assets from the NetDIMM, JVS
+controls, settings in the SRAM, no PVR/G2 DMA where it hangs. This branch's
+stalls are left undiagnosed in favour of it.
 
 ## Current state (2026-10-03, overnight)
 
