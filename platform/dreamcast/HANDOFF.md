@@ -42,7 +42,7 @@ Report for upstream: `NAOMI_ISSUE.md` (title and text of the issue for
 alphanu1/daytona-arcade-recomp). Not posted yet: first analyse the video
 of the stalls (done 2026-11-05: race timed with the lap timer, about 13
 game frames/s at best, 5-8 with many cars on screen; the 27 frames/s
-PROFILE average is from attract mode). Once posted, add its link
+PROFILE average hides it). Once posted, add its link
 here and record the reply.
 
 ## Current state (2026-10-03, overnight)

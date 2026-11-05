@@ -52,7 +52,7 @@ That works out at about 27 game frames a second against the arcade's 57.5, the s
 | Approaching the checkpoint | 10 s | 1.4 s | 7× | 8 frames/s |
 | At the checkpoint | 10 s | 0.9 s | 11× | 5 frames/s |
 
-So even the best stretches run at about 13 game frames a second, and it drops to 5–8 when there is a lot on screen (the rolling start with the whole field, the checkpoint area). Earlier sessions also showed short near-stops at 1–2 frames a second. The figures in the table above come from attract mode and do not show this; I'll add per-frame maximums to the PROFILE output to see which part grows (i960, TGP or ROM page cache misses read through the cartridge port with 16-bit PIO). The video is available if it helps.
+So even the best stretches run at about 13 game frames a second, and it drops to 5–8 when there is a lot on screen (the rolling start with the whole field, the checkpoint area). Earlier sessions also showed short near-stops at 1–2 frames a second. The PROFILE averages in the first table hide this; I'll add per-frame maximums to the PROFILE output to see which part grows (i960, TGP or ROM page cache misses read through the cartridge port with 16-bit PIO). The video is available if it helps.
 
 ### Other things on the branch (all behind `_arch_sub_naomi` except the last two)
 
