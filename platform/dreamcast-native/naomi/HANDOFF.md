@@ -28,6 +28,20 @@ Checked here, without the hardware:
 - The ELF: only the two wrappers call `enj_ctrl_map_states` / `enj_ctrl_get_states` (the LTO unit did not swallow
   the `--wrap`), the MIE driver and `/dimm` are linked, the ROM header loads and enters at 0x8c020000.
 
+## First run on the cabinet (2026-11-06)
+
+First image on the Crazy Taxi upright: controls, graphics and music right ("perfect", the owner). Missing: the
+announcer's voices (course select, MANUAL / AUTOMATIC, GENTLEMEN START YOUR ENGINES, TIME EXTENDED). Two causes:
+- The recipe's "play" ELF, whose options the first image copied, has no `NATIVE_SFX_VOICE_STREAM=1`: only the
+  countdown (in the race bank) spoke. `build_naomi.sh` now sets it.
+- The select screens' voices (`include/select.h`: ae215a..ae2160, ae2112/ae2113, ae2173, ae221c) were in no bank of
+  `recipes/sfx-banks.txt` at all (on a Dreamcast either). New line `select-voices`: the same streamed `voices.pak`
+  (63 phrases instead of 50), and `build_sfx.sh` checks their fit beside the select screens' music t01 instead of the
+  race music t03 (the AICA allocation is per phrase while it plays, `sfx.c voice_upload_begin`): the largest,
+  32,832 bytes, leaves 528,561. The race phrases are as before (largest 23,904, 1,146 left beside t03); `race.afb` and
+  `race.dsx` unchanged; `voices.pak` and `banks.tsv` now differ from `sfx-expected.sha256` by design.
+Second image (with both): to test. A candidate change for upstream too (the select voices on a Dreamcast).
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

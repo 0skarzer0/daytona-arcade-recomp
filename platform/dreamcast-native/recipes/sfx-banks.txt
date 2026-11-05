@@ -19,3 +19,8 @@ race pcm8 e0-e9
 race adpcm 9e01-9e2d
 race adpcm ae2109-ae210c ae2010 ae2002 ae2003
 voices adpcm ae2100 ae2101 ae2105-ae2108 ae210f ae2111 ae2114-ae2117 ae211a ae2120-ae2131 ae2133-ae2138 ae2163-ae216d ae2170 ae2171
+# select-voices: the select screens' voices (include/select.h: course select ae215a, the course names ae215e..ae2160,
+# transmission select ae215b with ae215d/ae215c, the confirmations ae2158/ae2159, the course calls ae2112/ae2113, time
+# attack ae2173/ae221c), streamed through the same slot as the voices (the same voices.pak). They play beside the
+# select screens' music (t01, the advertise piece), not the race music, so build_sfx.sh checks their fit there.
+select-voices adpcm ae2112 ae2113 ae2158-ae2160 ae2173 ae221c

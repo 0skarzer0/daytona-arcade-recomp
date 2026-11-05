@@ -21,7 +21,8 @@ index for that cabinet: https://github.com/0skarzer0/naomi-wheel-games.
 All of it is behind `NM_NAOMI` (`local.cfg.mk`, `NATIVE_NAOMI=1`). Outside this directory: the build option in
 `local.cfg.mk` (which also defines `__DREAMCAST__`, the port's test for "the SH-4 console": KOS defines `__NAOMI__`
 on a NAOMI instead), the `naomi` target in the `Makefile`, three `#ifdef NM_NAOMI` blocks in `code/main.c`, the save
-device in `code/save/game_save.c`, and one line in `code/audio/sfx.c` (a `/dimm` read holds the CPU like a `/pc`
+device in `code/save/game_save.c`, the select screens' voices in `recipes/sfx-banks.txt` (line `select-voices`,
+checked by `recipes/build_sfx.sh` beside the select music; they serve the Dreamcast build too), and one line in `code/audio/sfx.c` (a `/dimm` read holds the CPU like a `/pc`
 read, so the announcer's phrases take the main-loop path). The Dreamcast build compiles what it did before.
 
 ### Reads from the NetDIMM

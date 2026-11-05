@@ -81,11 +81,11 @@ cp $W/render/render.tsv $OUT/sfx/
 
 # Banks: "BANK CODING KEY..." lines; a range FIRST-LAST covers the rendered keys with FIRST's prefix in between.
 typeset -A coding
-banks=(); voice_keys=(); race_left=0
+banks=(); voice_keys=(); select_keys=(); race_left=0; race_aica=0
 while read -r bank code keys; do
   [[ -z $bank || $bank == \#* ]] && continue
   [[ $code == (pcm8|adpcm) ]] || { print -u2 -r -- "sfx-banks.txt: coding $code"; exit 1; }
-  [[ $bank == voices ]] || (( ${banks[(Ie)$bank]} )) || banks+=($bank)
+  [[ $bank == (voices|select-voices) ]] || (( ${banks[(Ie)$bank]} )) || banks+=($bank)
   expanded=$(python3 -I - $W/render/render.tsv ${=keys} <<'EOF'
 import sys
 keys = [line.split('\t')[0] for line in open(sys.argv[1]).read().splitlines()[1:]]
@@ -106,9 +106,10 @@ EOF
   )
   for key in ${(f)expanded}; do
     [[ -n $key ]] || continue
-    if [[ $bank == voices ]]; then
+    if [[ $bank == (voices|select-voices) ]]; then
       [[ $code == adpcm ]] || { print -u2 -r -- "sfx-banks.txt: voices are adpcm"; exit 1; }
       voice_keys+=($key)
+      [[ $bank == select-voices ]] && select_keys+=($key)
       [[ $VOICES == resident ]] && coding[race/$key]=adpcm
       continue
     fi
@@ -159,7 +160,7 @@ EOF
   if [[ $bank == race ]] && (( left < 4096 )); then
     print -u2 -r -- "the race bank does not fit beside the race music: $left bytes left (less than 4 KiB)"; exit 1
   fi
-  [[ $bank == race ]] && race_left=$left
+  [[ $bank == race ]] && race_left=$left && race_aica=$aica
 done
 
 if [[ $VOICES == stream ]] && (( $#voice_keys )); then
@@ -169,16 +170,20 @@ if [[ $VOICES == stream ]] && (( $#voice_keys )); then
     $VGM $W/render/vgm/$key.vgm $W/voices/$key.afx --adpcm >> $OUT/logs/sfx-convert.log
     rm -f $W/voices/$key.afc $W/voices/$key.afv
   done
-  need=$(python3 -I - $W/voices $OUT/sfx/voices.pak $voice_keys <<'PACK'
-import struct, sys
+  needs=$(SELECT_KEYS="$select_keys" python3 -I - $W/voices $OUT/sfx/voices.pak $voice_keys <<'PACK'
+import os, struct, sys
 from pathlib import Path
 align = lambda n: (n + 31) & ~31
-root, out, keys = Path(sys.argv[1]), sys.argv[2], sys.argv[3:]
-images, need = [], 0
+root, out = Path(sys.argv[1]), sys.argv[2]
+keys = sorted(set(sys.argv[3:]), key=lambda k: int(k, 16))  # the directory in key order (sfx.c's binary search)
+select = set(os.environ.get('SELECT_KEYS', '').split())
+images, need, need_select = [], 0, 0
 for key in keys:
     afb, afx = (root / f'{key}.afb').read_bytes(), (root / f'{key}.afx').read_bytes()
     # AICA RAM while it plays: its samples (afb header +20) and the flow's upload image (afx +20), 32-byte blocks.
-    need = max(need, align(struct.unpack_from('<I', afb, 20)[0]) + align(struct.unpack_from('<I', afx, 20)[0]))
+    size = align(struct.unpack_from('<I', afb, 20)[0]) + align(struct.unpack_from('<I', afx, 20)[0])
+    if key in select: need_select = max(need_select, size)
+    else: need = max(need, size)
     images.append((int(key, 16), afb, afx))
 offset = align(12 + 20 * len(images))
 directory, payload = [], bytearray()
@@ -188,13 +193,23 @@ for key, afb, afx in images:
     directory.append(struct.pack('<IIIII', key, b, len(afb), x, len(afx)))
 head = b'VOX1' + struct.pack('<II', 1, len(images)) + b''.join(directory)
 Path(out).write_bytes(head + bytes(offset - len(head)) + payload)
-print(need)
+print(need, need_select)
 PACK
   )
+  need=${needs% *}; need_select=${needs#* }
   print -r -- $'voices\t'"${#voice_keys}"$'\t'"$(zstat +size $OUT/sfx/voices.pak)"$'\t'"$need"$'\t'"$(( race_left - need ))" >> $OUT/sfx/banks.tsv
   print -r -- "   voices: the largest phrase needs $need bytes of AICA RAM; $(( race_left - need )) left while it plays"
   if (( race_left - need < 0 )); then
     print -u2 -r -- "the largest streamed phrase does not fit beside the race bank and the race music"; exit 1
+  fi
+  if (( $#select_keys )) && [[ -n $MUSIC ]]; then
+    # The select screens play the advertise piece t01 (title_mode.c NM_MUSIC_ADVERTISE), not the race music.
+    select_music=$(( $(zstat +size $MUSIC/t01.afb) - 32 + $(zstat +size $MUSIC/t01.afx) ))
+    select_left=$(( ARENA - select_music - race_aica - need_select ))
+    print -r -- "   select voices: ${#select_keys}, the largest needs $need_select bytes; $select_left left beside the race bank and t01 ($select_music)"
+    if (( select_left < 0 )); then
+      print -u2 -r -- "the largest select-screen phrase does not fit beside the race bank and t01"; exit 1
+    fi
   fi
 fi
 rm -rf $W
