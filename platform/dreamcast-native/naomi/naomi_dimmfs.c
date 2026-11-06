@@ -302,3 +302,9 @@ int dimmfs_cache(const char *name)
     resident[i] = ram;
     return (int)e->size;
 }
+
+int dimmfs_size(const char *name)
+{
+    const dimmfs_entry_t *e = mounted ? find(name) : NULL;
+    return e ? (int)e->size : -1;
+}

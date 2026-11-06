@@ -23,6 +23,9 @@ int dimmfs_init(void);
    Returns its size, or -1 (not mounted, no such file, no memory: it stays read from the NetDIMM). */
 int dimmfs_cache(const char *name);
 
+/* A file's size (path inside /dimm), -1 when there is none. */
+int dimmfs_size(const char *name);
+
 /* Non-zero once /dimm is mounted */
 int dimmfs_mounted(void);
 

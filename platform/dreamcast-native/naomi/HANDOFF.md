@@ -82,6 +82,17 @@ while settling and bounded to 3 s otherwise; then the fallback line (with "a phr
 the piece's ADPCM copy. Lesson: never wait in the loader on something only `nm_sfx_update` advances.
 Still unknown: why t03 does not fit in PCM8 on the NAOMI; read the fallback line under TEST in a Beginner race.
 
+## Fifth run (2026-11-06, 03:50)
+
+No hang; Beginner still silent, and TEST shows no `Sound:` line about track 03 at all: no "does not fit", no load
+error, no start failure. So the load is not refused: the likely cause is that it never finishes. t03 is the largest
+piece loaded in PCM8 (1.56 MB), read from `/dimm` a chunk at a time in the idle waits, and `sound.c loading()` drops
+a load silently when the game wants another piece before it ends ("a change of mind"). Sixth image:
+- the music in main RAM at boot within an 8 MB reserve for the game (`naomi_log.c`, `dimmfs_size`, `heap_left`):
+  the race pieces first (t03, the ADPCM copies of t03/t04/t05, t06), the attract's t01, then the cued pieces;
+- `NATIVE_SOUND_LOG=1` in `build_naomi.sh`: a console line for every music request, start and end ("Sound log",
+  shown by TEST), to confirm the cause if Beginner is still silent.
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

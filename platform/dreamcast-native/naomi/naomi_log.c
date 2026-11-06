@@ -15,6 +15,14 @@
 
 #include "naomi.h"
 #include "naomi_dimmfs.h"
+#include <unistd.h>
+
+#include <arch/arch.h> /* _arch_mem_top: 0x8e000000 on a NAOMI (32 MB) */
+/* Main RAM above the heap's top (what malloc can still take from the system). */
+static uintptr_t heap_left(void) {
+    const uintptr_t top = (uintptr_t)sbrk(0), mem_top = (uintptr_t)_arch_mem_top;
+    return mem_top > top ? mem_top - top : 0;
+}
 
 #define LOG_LINES 160
 #define LOG_WIDTH 100
@@ -145,19 +153,29 @@ int nm_naomi_boot(void) {
     /* The announcer's phrases are read the moment the game asks for one (sfx.c): from main RAM, not through the
      * cartridge port, so they start on time (32 MB of RAM: 0.9 MB is cheap here). */
     printf("NAOMI: sfx/voices.pak in RAM: %d bytes\n", dimmfs_cache("sfx/voices.pak"));
-    /* The pieces that must start on cue (game start, finish, podium, GAME OVER, victory lane: music_map.h t02,
-     * t07..t16, about 6.8 MB) in RAM too: their loads are then memcpy, not PIO in the idle waits. The attract's
-     * and the race pieces (t01, t03..t06) load while a screen is still up and stay on the NetDIMM. */
-    static const unsigned cued[] = {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    /* Music in RAM too, as long as the game keeps its room (32 MB here, 16 on a Dreamcast): loads from the
+     * NetDIMM go a chunk at a time in the idle waits, and a load the game changes its mind about before it ends is
+     * dropped silently (sound.c loading). Beginner's race piece t03, the largest loaded in PCM8 (1.56 MB), never
+     * finished in time on the cabinet (2026-11-06: no music, no error). In order: the race pieces and their ADPCM
+     * copies, the attract's, then the pieces that must start on cue (game start, finish, podium, GAME OVER,
+     * victory lane). What does not fit above the reserve stays on the NetDIMM. */
+    static const char *const music[] = {
+        "music/t03", "music/adpcm/t03", "music/adpcm/t04", "music/adpcm/t05", "music/t06", "music/t01",
+        "music/t02", "music/t15", "music/t07", "music/t08", "music/t09", "music/t10", "music/t11", "music/t12",
+        "music/t13", "music/t14", "music/t16"};
+    const uintptr_t reserve = 8u << 20; /* for the game's own allocations (courses, cars, caches) */
     long cached = 0;
-    for (unsigned i = 0; i < sizeof(cued) / sizeof(cued[0]); ++i)
-        for (unsigned k = 0; k < 2; ++k) {
-            char name[24];
-            snprintf(name, sizeof(name), "music/t%02u.%s", cued[i], k ? "afx" : "afb");
-            const int bytes = dimmfs_cache(name);
-            if (bytes > 0) cached += bytes;
-        }
-    printf("NAOMI: cued music in RAM: %ld bytes\n", cached);
+    unsigned pieces = 0;
+    for (unsigned i = 0; i < sizeof(music) / sizeof(music[0]); ++i) {
+        char afb[32], afx[32];
+        snprintf(afb, sizeof(afb), "%s.afb", music[i]);
+        snprintf(afx, sizeof(afx), "%s.afx", music[i]);
+        const int size = dimmfs_size(afb) + dimmfs_size(afx);
+        if (size <= 0 || heap_left() < reserve + (uintptr_t)size) continue;
+        const int a = dimmfs_cache(afb), b = dimmfs_cache(afx);
+        if (a > 0 && b > 0) { cached += a + b; ++pieces; }
+    }
+    printf("NAOMI: music in RAM: %u pieces, %ld bytes; heap left %lu\n", pieces, cached, (unsigned long)heap_left());
     const kthread_attr_t attributes = {.create_detached = true, .stack_size = 8192, .label = "naomi watchdog",
                                        .prio = PRIO_DEFAULT - 1};
     if (!thd_create_ex(&attributes, watchdog, NULL)) printf("NAOMI: no watchdog thread\n");
