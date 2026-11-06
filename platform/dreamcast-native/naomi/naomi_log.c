@@ -145,6 +145,19 @@ int nm_naomi_boot(void) {
     /* The announcer's phrases are read the moment the game asks for one (sfx.c): from main RAM, not through the
      * cartridge port, so they start on time (32 MB of RAM: 0.9 MB is cheap here). */
     printf("NAOMI: sfx/voices.pak in RAM: %d bytes\n", dimmfs_cache("sfx/voices.pak"));
+    /* The pieces that must start on cue (game start, finish, podium, GAME OVER, victory lane: music_map.h t02,
+     * t07..t16, about 6.8 MB) in RAM too: their loads are then memcpy, not PIO in the idle waits. The attract's
+     * and the race pieces (t01, t03..t06) load while a screen is still up and stay on the NetDIMM. */
+    static const unsigned cued[] = {2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    long cached = 0;
+    for (unsigned i = 0; i < sizeof(cued) / sizeof(cued[0]); ++i)
+        for (unsigned k = 0; k < 2; ++k) {
+            char name[24];
+            snprintf(name, sizeof(name), "music/t%02u.%s", cued[i], k ? "afx" : "afb");
+            const int bytes = dimmfs_cache(name);
+            if (bytes > 0) cached += bytes;
+        }
+    printf("NAOMI: cued music in RAM: %ld bytes\n", cached);
     const kthread_attr_t attributes = {.create_detached = true, .stack_size = 8192, .label = "naomi watchdog",
                                        .prio = PRIO_DEFAULT - 1};
     if (!thd_create_ex(&attributes, watchdog, NULL)) printf("NAOMI: no watchdog thread\n");

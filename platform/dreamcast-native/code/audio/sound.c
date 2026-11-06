@@ -448,6 +448,9 @@ static int load_step(void) {
              * end and free its samples (a few seconds at most) rather than give up on the piece, which has no
              * ADPCM copy. */
             if (nm_sfx_voice_in_aica()) return 0;
+            printf("Sound: track %02u does not fit in PCM8 (bank %lu, with flow %lu; AICA free %lu, largest block %lu): "
+                   "its ADPCM copy\n", load.track, (unsigned long)bank, (unsigned long)need,
+                   (unsigned long)stats.free_bytes, (unsigned long)stats.largest_free_block);
 #ifdef NM_SOUND_IO_WORKER
             io_close(load.file);
 #else

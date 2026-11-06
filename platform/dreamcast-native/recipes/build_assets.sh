@@ -166,13 +166,15 @@ if (( ! NOMUSIC )); then
 fi
 # The race pieces of Advanced (t04, Let's Go Away) and Expert (t05, Sky High) do not fit the AICA RAM in PCM8 beside the
 # effects' race bank (1,616,201 and 1,818,799 bytes of bank and flow against 1,586,784 left of 2,072,768): an ADPCM
-# copy of each in music/adpcm/, which code/audio/sound.c loads when the PCM8 one does not.
+# copy of each in music/adpcm/, which code/audio/sound.c loads when the PCM8 one does not. Beginner's (t03) fits in
+# PCM8 with 25,050 bytes to spare on a Dreamcast, but not on a NAOMI 2 (seen on the cabinet, 2026-11-06: silent;
+# cause to be read from the log line sound.c prints): an ADPCM copy of it too, as the fallback.
 MA=$W/music-adpcm
-DESC_music_adpcm="race music of Advanced and Expert in ADPCM (t04, t05; afx_vgm --adpcm) -> OUTDIR/work/music-adpcm/music"
+DESC_music_adpcm="race music of Beginner, Advanced and Expert in ADPCM (t03, t04, t05; afx_vgm --adpcm) -> OUTDIR/work/music-adpcm/music"
 music_adpcm() {
   local vgm=$REPO/extern/aicaflow/dependencies/AICAforge/build/afx_vgm validate=$REPO/extern/aicaflow/driver/build/afx_validate
   fresh $MA; mkdir -p $MA/vgz $MA/music
-  unzip -q -j $MUSIC '04 *.vgz' '05 *.vgz' -d $MA/vgz
+  unzip -q -j $MUSIC '03 *.vgz' '04 *.vgz' '05 *.vgz' -d $MA/vgz
   local src
   for src in $MA/vgz/*.vgz; do
     local num=${${src:t:r}%% *}
@@ -902,7 +904,7 @@ assets() {
     cp $G/packs/world-$set-strips.dnm $d/world.dnm
     cp $G/packs/world-$set-mip.dnt $d/world.dnt
     if (( ! NOMUSIC )); then mkdir -p $d/music; cp $MU/music/t<01-45>.afb $MU/music/t<01-45>.afx $d/music/; fi
-    if (( ! NOMUSIC )) && [[ -f $MA/music/t05.afx ]]; then mkdir -p $d/music/adpcm; cp $MA/music/t0[45].af[bx] $d/music/adpcm/; fi
+    if (( ! NOMUSIC )) && [[ -f $MA/music/t05.afx ]]; then mkdir -p $d/music/adpcm; cp $MA/music/t0[345].af[bx](N) $d/music/adpcm/; fi
     if (( SFX )); then mkdir -p $d/sfx; cp $SX/sfx/race.afb $SX/sfx/race.dsx $d/sfx/; [[ ! -f $SX/sfx/voices.pak ]] || cp $SX/sfx/voices.pak $d/sfx/; fi
   done
   {

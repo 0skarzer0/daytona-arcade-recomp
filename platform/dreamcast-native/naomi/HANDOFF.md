@@ -59,6 +59,19 @@ Third image:
   format in test_sfx.c, an upstream warning).
 - TEST held 3 s: the console's sound and file lines on the screen (ring of 160 lines), to photograph.
 
+## Third run (2026-11-06, 02:00)
+
+Beginner's race music (t03) still silent; Advanced and Expert play. The GAME OVER jingle starts late. So t03 in PCM8
+does not fit on the NAOMI even with no phrase playing (Advanced and Expert never do: they always load their ADPCM
+copies). Cause not known yet (on a Dreamcast it fits with 25,050 bytes to spare): `sound.c` now prints a line with
+the AICA free bytes and largest block when a piece falls back (TEST held 3 s shows it). Fourth image:
+- an ADPCM copy of t03 too (`recipes/build_assets.sh` step `music_adpcm`: t03, t04, t05), the same fallback as
+  Advanced and Expert;
+- the pieces that must start on cue (t02, t07..t16: game start, finish, podium, GAME OVER, victory lane, 6.8 MB)
+  copied into main RAM at boot like `voices.pak`.
+To read on the cabinet: the fallback line's numbers (TEST after a Beginner race starts), to find what holds the AICA
+RAM or how it is split.
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log
