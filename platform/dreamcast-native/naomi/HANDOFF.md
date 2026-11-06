@@ -72,6 +72,16 @@ the AICA free bytes and largest block when a piece falls back (TEST held 3 s sho
 To read on the cabinet: the fallback line's numbers (TEST after a Beginner race starts), to find what holds the AICA
 RAM or how it is split.
 
+## Fourth run (2026-11-06, 02:30)
+
+A HANG screen at a Beginner race start (main thread in `genwait_wait`), no fallback line in the log. Cause: the
+third image's wait in `sound.c` LOAD_ROOM for a phrase to leave the AICA RAM. `nm_sound_settle` (select_mode.c, before
+the race) loops on the music's load with `nm_sound_update` alone, so the effects (and the phrase) never advance there:
+the wait never ends, settle blocks (its loop calls `load_wait` up to 4000 times). Fifth image: the wait is skipped
+while settling and bounded to 3 s otherwise; then the fallback line (with "a phrase holds AICA RAM" when one does) and
+the piece's ADPCM copy. Lesson: never wait in the loader on something only `nm_sfx_update` advances.
+Still unknown: why t03 does not fit in PCM8 on the NAOMI; read the fallback line under TEST in a Beginner race.
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

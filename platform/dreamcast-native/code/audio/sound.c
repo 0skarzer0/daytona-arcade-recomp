@@ -445,12 +445,19 @@ static int load_step(void) {
             /* An announcer's phrase (audio/sfx.h, streamed: its samples are in the AICA RAM only while it plays)
              * can be what is in the way: GENTLEMEN START YOUR ENGINES still playing when the race piece loads, the
              * race piece t03 leaving 1,146 bytes beside the race bank and the largest race phrase. Wait for it to
-             * end and free its samples (a few seconds at most) rather than give up on the piece, which has no
-             * ADPCM copy. */
-            if (nm_sfx_voice_in_aica()) return 0;
-            printf("Sound: track %02u does not fit in PCM8 (bank %lu, with flow %lu; AICA free %lu, largest block %lu): "
+             * end and free its samples rather than fall back to the piece's ADPCM copy. Bounded: nm_sound_settle
+             * loops on this load without updating the effects, so the phrase cannot end there (a wait for it alone
+             * hung the NAOMI cabinet at a Beginner race start, 2026-11-06). */
+            static uint64_t voice_wait_since;
+            if (nm_sfx_voice_in_aica() && !sound.settling) {
+                if (!voice_wait_since) voice_wait_since = now_us() | 1u;
+                if (now_us() - voice_wait_since < 3000000u) return 0;
+            }
+            voice_wait_since = 0;
+            printf("Sound: track %02u does not fit in PCM8 (bank %lu, with flow %lu; AICA free %lu, largest block %lu%s): "
                    "its ADPCM copy\n", load.track, (unsigned long)bank, (unsigned long)need,
-                   (unsigned long)stats.free_bytes, (unsigned long)stats.largest_free_block);
+                   (unsigned long)stats.free_bytes, (unsigned long)stats.largest_free_block,
+                   nm_sfx_voice_in_aica() ? "; a phrase holds AICA RAM" : "");
 #ifdef NM_SOUND_IO_WORKER
             io_close(load.file);
 #else
