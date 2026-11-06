@@ -19,6 +19,10 @@ extern "C" {
    Returns the number of files, or -1 if there is no archive. */
 int dimmfs_init(void);
 
+/* Copy one file (its path inside /dimm, e.g. "sfx/voices.pak") into main RAM: its reads become a memcpy.
+   Returns its size, or -1 (not mounted, no such file, no memory: it stays read from the NetDIMM). */
+int dimmfs_cache(const char *name);
+
 /* Non-zero once /dimm is mounted */
 int dimmfs_mounted(void);
 

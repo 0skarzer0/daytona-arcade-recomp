@@ -46,6 +46,7 @@ read sleeps on a DMA; a PIO read would not give the CPU back.
 | START + accelerator | Y: the next view (VR1, VR2, VR3, VR4) |
 | START + accelerator + brake | the operator settings (START with both triggers, as on a pad) |
 | coin chute, SERVICE | A for four frames: a credit in the attract and the title |
+| TEST held 3 s | the console's sound and file lines on the screen (diagnosis; the game stops: power cycle) |
 
 The raw JVS channels are mapped here, not by KOS's `mie_default_cont_map`, which without a calibration run reads a
 pedal at rest as a fifth pressed. The ranges start from the values measured on the Crazy Taxi cabinet (wheel

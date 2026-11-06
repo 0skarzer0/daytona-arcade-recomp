@@ -442,6 +442,12 @@ static int load_step(void) {
         afx_mem_stats_t stats;
         const uint32_t bank = (load.size + 31u) & ~31u, need = bank + ((flow + 31u) & ~31u);
         if (!load.adpcm && !afx_mem_stats(&stats) && (bank > stats.largest_free_block || need > stats.free_bytes)) {
+            /* An announcer's phrase (audio/sfx.h, streamed: its samples are in the AICA RAM only while it plays)
+             * can be what is in the way: GENTLEMEN START YOUR ENGINES still playing when the race piece loads, the
+             * race piece t03 leaving 1,146 bytes beside the race bank and the largest race phrase. Wait for it to
+             * end and free its samples (a few seconds at most) rather than give up on the piece, which has no
+             * ADPCM copy. */
+            if (nm_sfx_voice_in_aica()) return 0;
 #ifdef NM_SOUND_IO_WORKER
             io_close(load.file);
 #else

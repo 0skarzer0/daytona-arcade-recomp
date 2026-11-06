@@ -14,6 +14,7 @@
  *                              keeps the view (practice.c practice_view_tick)
  *   START + both pedals        START with both triggers (the operator settings, select_mode.c)
  *   coin chute, SERVICE        A for a few frames: a credit in the attract and the title (practice.c)
+ *   TEST held 3 s              the console's sound and file lines on the screen (a diagnosis; the game stops)
  *
  * Raw JVS values: KOS's own mapping (mie_default_cont_map) needs a calibration run first and otherwise reads a
  * pedal at rest as a fifth pressed, so the raw channels are mapped here, from the values measured on a Crazy Taxi
@@ -23,6 +24,7 @@
 #include <dc/maple.h>
 #include <dc/maple/mie.h>
 #include <enDjinn/enj_ctrl.h>
+#include "naomi.h"
 
 enj_ctrlr_state_t **__real_enj_ctrl_get_states(void);
 size_t __real_enj_ctrl_map_states(void);
@@ -38,6 +40,7 @@ static struct {
 } cal = {8448, 33792, 60160, 11776, 47104, 14080, 47360};
 
 static int coin_frames;
+static int test_frames; /* TEST held: after 3 s the log screen (naomi_log.c) */
 
 static uint32_t edge(uint32_t previous, int down) {
     switch (previous) {
@@ -81,6 +84,8 @@ static void read_cabinet(void) {
     cabinet.joyy = 0;
     cabinet.rtrigger = pedal(clean(j->accel), &cal.accel_min, &cal.accel_max);
     cabinet.ltrigger = pedal(clean(j->brake), &cal.brake_min, &cal.brake_max);
+    test_frames = (j->panel.psw.test || j->system.test) ? test_frames + 1 : 0;
+    if (test_frames >= 180) nm_naomi_show_sound_log();
     const int start = j->p1.start;
     const int accel = cabinet.rtrigger >= 128, brake = cabinet.ltrigger >= 128;
     const int view = start && accel && !brake;

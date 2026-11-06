@@ -26,6 +26,9 @@ void nm_naomi_pvr_up(void);
 /* Show the kept console lines on the screen, for good. */
 void nm_naomi_show_log(const char *why) __attribute__((noreturn));
 
+/* TEST held on the cabinet: the console's sound, file and failure lines on the screen, for good (a diagnosis). */
+void nm_naomi_show_sound_log(void) __attribute__((noreturn));
+
 /* The SRAM save device (nm_save_device_t of save_store.h). */
 const void *nm_naomi_save_device(void);
 

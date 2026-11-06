@@ -48,6 +48,9 @@ int nm_sfx_init(const char *asset_root);
 void nm_sfx_command(uint32_t command);
 /* Once per updater call: the engine layers' changes. */
 void nm_sfx_update(void);
+/* Non-zero while an announcer's streamed phrase holds AICA RAM (uploading, playing, or ended and not yet freed): the
+ * music's loader waits for it before it gives up on a piece that does not fit (audio/sound.c LOAD_ROOM). */
+int nm_sfx_voice_in_aica(void);
 /* Stops everything, waits (wait_ms, at most about a second) until AICAflow has freed the
  * instances, then frees the flows and the bank. Before afx_shutdown. */
 void nm_sfx_shutdown(void (*wait_ms)(unsigned));

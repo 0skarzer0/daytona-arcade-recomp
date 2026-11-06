@@ -346,7 +346,7 @@ static void voice_init(const char *root) {
     free(raw);
     voice.count = count;
 #ifdef _arch_dreamcast
-    voice.mainloop = !strncmp(root, "/pc", 3) || !strncmp(root, "/dimm", 5); /* both reads hold the CPU */
+    voice.mainloop = !strncmp(root, "/pc", 3);
 #else
     voice.mainloop = voice_force_mainloop;
 #endif
@@ -604,6 +604,8 @@ static void voice_upload_begin(unsigned slot) {
     voice.stage = VOICE_UPLOADING;
 }
 
+int nm_sfx_voice_in_aica(void) { return voice.up && voice.stage != VOICE_IDLE; }
+
 static void voice_update(void) {
     if (!voice.up) return;
     const uint64_t begin = voice_us();
@@ -702,6 +704,7 @@ static void voice_quiesce(void) {}
 static void voice_hint(const uint32_t *keys, unsigned n) { (void)keys; (void)n; }
 static void voice_shutdown(void (*wait_ms)(unsigned)) { (void)wait_ms; }
 static uint32_t voice_idle(uint32_t budget_us) { (void)budget_us; return 0; }
+int nm_sfx_voice_in_aica(void) { return 0; }
 #endif
 
 void nm_sfx_quiesce(void) { voice_quiesce(); }

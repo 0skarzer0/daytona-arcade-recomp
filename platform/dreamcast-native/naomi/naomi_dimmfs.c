@@ -56,6 +56,9 @@ static dimmfs_entry_t *entries;
 static uint32_t        entry_count;
 static int             mounted;
 static uint16_t        bounce[CHUNK / 2 + 2];
+/* Files copied into main RAM at boot (dimmfs_cache): their reads are a memcpy, not PIO through the cartridge
+ * port. Index parallel to entries; NULL when the file is read from the NetDIMM. */
+static uint8_t       **resident;
 
 /* Read len bytes (even) from cartridge address src (even) into dst (2-byte
    aligned). Interrupts are off only for one chunk at a time. */
@@ -138,9 +141,14 @@ static ssize_t dimmfs_read(void *h, void *buf, size_t bytes)
     if (bytes == 0)
         return 0;
 
-    mutex_lock(&lock);
-    cart_read_any(buf, archive_base + f->entry->offset + f->pos, bytes);
-    mutex_unlock(&lock);
+    const uint8_t *ram = resident ? resident[f->entry - entries] : NULL;
+    if (ram) {
+        memcpy(buf, ram + f->pos, bytes);
+    } else {
+        mutex_lock(&lock);
+        cart_read_any(buf, archive_base + f->entry->offset + f->pos, bytes);
+        mutex_unlock(&lock);
+    }
 
     f->pos += bytes;
     return (ssize_t)bytes;
@@ -271,4 +279,26 @@ int dimmfs_init(void)
 int dimmfs_mounted(void)
 {
     return mounted;
+}
+
+int dimmfs_cache(const char *name)
+{
+    if (!mounted)
+        return -1;
+    const dimmfs_entry_t *e = find(name);
+    if (!e)
+        return -1;
+    if (!resident && !(resident = (uint8_t **)calloc(entry_count, sizeof(uint8_t *))))
+        return -1;
+    const uint32_t i = (uint32_t)(e - entries);
+    if (resident[i])
+        return (int)e->size;
+    uint8_t *ram = (uint8_t *)malloc(e->size ? e->size : 1);
+    if (!ram)
+        return -1;
+    mutex_lock(&lock);
+    cart_read_any(ram, archive_base + e->offset, e->size);
+    mutex_unlock(&lock);
+    resident[i] = ram;
+    return (int)e->size;
 }

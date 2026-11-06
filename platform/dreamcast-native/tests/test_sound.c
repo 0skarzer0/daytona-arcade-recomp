@@ -22,6 +22,7 @@ int nm_sfx_init(const char *root) { (void)root; ++sfx_inits; return 1; }
 void nm_sfx_command(uint32_t command) { (void)command; ++sfx_commands; }
 void nm_sfx_update(void) { ++sfx_updates; }
 void nm_sfx_quiesce(void) {}
+int nm_sfx_voice_in_aica(void) { return 0; }
 void nm_sfx_shutdown(void (*wait)(unsigned)) { if (wait) wait(0); ++sfx_shutdowns; }
 
 const unsigned char nm_sound_test_firmware[32] = {1};

@@ -42,6 +42,23 @@ announcer's voices (course select, MANUAL / AUTOMATIC, GENTLEMEN START YOUR ENGI
   `race.dsx` unchanged; `voices.pak` and `banks.tsv` now differ from `sfx-expected.sha256` by design.
 Second image (with both): to test. A candidate change for upstream too (the select voices on a Dreamcast).
 
+## Second run (2026-11-06, 01:00)
+
+Voices on, select voices too. New: **no race music**; a lag before GAME OVER, the horns of the course and the
+transmission select and GENTLEMEN START YOUR ENGINES; the transmission screen's two turning cars missing (an upstream
+gap: README "Not native yet", not a NAOMI fault). Diagnosis without a log (it was not visible):
+- The lag: the phrases were read from `/dimm` in the main loop's idle waits, a chunk a frame, paced by dcload's costs.
+- The race music: the race piece t03 leaves 1,146 bytes beside the race bank and the largest race phrase, so it
+  loads only when no phrase holds AICA RAM (and the free space is not split by one). A late GENTLEMEN still playing
+  when t03 loads makes `sound.c` LOAD_ROOM fall back to an ADPCM copy that exists only for t04 and t05: silence.
+Third image:
+- `voices.pak` (0.9 MB) copied into main RAM at boot (`dimmfs_cache`, `naomi_log.c`), read by sfx.c's worker thread
+  (`/dimm` is no longer a main-loop path in `sfx.c`: upstream's line restored).
+- `sound.c` LOAD_ROOM waits while a phrase holds AICA RAM (`nm_sfx_voice_in_aica`, audio/sfx.h) instead of giving
+  up on the piece. Host tests `sound-check`, `sfx-check`, `sfx-voices-check` pass (clang; GCC rejects a scanf
+  format in test_sfx.c, an upstream warning).
+- TEST held 3 s: the console's sound and file lines on the screen (ring of 160 lines), to photograph.
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

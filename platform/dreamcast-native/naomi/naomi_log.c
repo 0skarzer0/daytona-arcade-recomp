@@ -16,7 +16,7 @@
 #include "naomi.h"
 #include "naomi_dimmfs.h"
 
-#define LOG_LINES 40
+#define LOG_LINES 160
 #define LOG_WIDTH 100
 #define SHOW_LINES 26
 #define HANG_FIRST_FRAME_S 90 /* boot: the asset loads before the first frame read megabytes through the cartridge port */
@@ -71,9 +71,21 @@ static dbgio_handler_t ring = {
 
 void nm_naomi_pvr_up(void) { pvr_up = 1; }
 
-void nm_naomi_show_log(const char *why) {
+/* Lines worth a look when nothing failed (TEST held): sound, files, this port's own and failures. */
+static int wanted(const char *line) {
+    static const char *const keys[] = {"Sound", "sound", "music", "phrase", "NAOMI", "FAIL", "fail", "dimm", "no "};
+    for (unsigned i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i)
+        if (strstr(line, keys[i])) return 1;
+    return 0;
+}
+
+static void show(const char *why, int filtered) __attribute__((noreturn));
+void nm_naomi_show_log(const char *why) { show(why, 0); }
+void nm_naomi_show_sound_log(void) { show("TEST: sound and file lines", 1); }
+
+static void show(const char *why, int filtered) {
     char copy[LOG_LINES][LOG_WIDTH];
-    unsigned count, first;
+    unsigned count;
     const irq_mask_t old = irq_disable();
     if (column) { lines[line_count % LOG_LINES][column] = 0; }
     count = line_count + (column ? 1u : 0u);
@@ -84,8 +96,12 @@ void nm_naomi_show_log(const char *why) {
     vid_clear(0, 0, 64);
     dbgio_dev_select("fb");
     printf("\n DAYTONA USA native (NAOMI) - %s\n\n", why);
-    first = count > SHOW_LINES ? count - SHOW_LINES : 0;
-    for (unsigned i = first; i < count; ++i) {
+    unsigned pick[SHOW_LINES], n = 0;
+    const unsigned oldest = count > LOG_LINES ? count - LOG_LINES : 0;
+    for (unsigned i = count; i-- > oldest && n < SHOW_LINES;)
+        if (!filtered || wanted(copy[i % LOG_LINES])) pick[n++] = i;
+    while (n) {
+        const unsigned i = pick[--n];
         char line[78];
         snprintf(line, sizeof(line), "%s", copy[i % LOG_LINES]);
         printf(" %s\n", line);
@@ -126,6 +142,9 @@ int nm_naomi_boot(void) {
     const int files = dimmfs_init();
     printf("NAOMI: NetDIMM archive: %d files\n", files);
     if (files <= 0) nm_naomi_show_log("NO ASSETS IN THE NETDIMM IMAGE (naomi/naomi_pack.py)");
+    /* The announcer's phrases are read the moment the game asks for one (sfx.c): from main RAM, not through the
+     * cartridge port, so they start on time (32 MB of RAM: 0.9 MB is cheap here). */
+    printf("NAOMI: sfx/voices.pak in RAM: %d bytes\n", dimmfs_cache("sfx/voices.pak"));
     const kthread_attr_t attributes = {.create_detached = true, .stack_size = 8192, .label = "naomi watchdog",
                                        .prio = PRIO_DEFAULT - 1};
     if (!thd_create_ex(&attributes, watchdog, NULL)) printf("NAOMI: no watchdog thread\n");
