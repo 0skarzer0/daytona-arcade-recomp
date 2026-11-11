@@ -39,6 +39,7 @@ typedef struct {
     uint32_t voice_bytes_per_ms;           /* /pc: the measured read throughput */
     uint32_t voice_latency_max, voice_latency_mean; /* updates from a phrase's request to its start */
     unsigned voice_reads, voice_prefetches, voice_prefetch_cancels, voice_hits, voice_overruns; /* reads; requests found read */
+    unsigned voice_preempts;  /* phrases cut short by the next one, ready to start (sfx.c voice_update) */
     uint32_t voice_call_us;                /* /pc: the fitted cost of a read call (plus bytes at voice_bytes_per_ms) */
 } nm_sfx_stats_t;
 

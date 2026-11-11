@@ -6,7 +6,9 @@
 # The ELF has the options of the recipe's "play" ELF (the game from the attract: NATIVE_RESIDENT_CAR=1,
 # NATIVE_FRAME_PROFILE=1, NATIVE_HANDOPT=1, AUTO_START=attract) plus the announcer's streamed phrases
 # (NATIVE_SFX_VOICE_STREAM=1: without it only THREE, TWO, ONE, GO speak), a line a music request, start and end
-# in the console (NATIVE_SOUND_LOG=1: TEST shows them) and NATIVE_NAOMI=1, and is built with the
+# in the console (NATIVE_SOUND_LOG=1: TEST shows them), the prebuilt world submission tables for all three courses
+# (NATIVE_WORLD_STREAM_COURSES=7: Expert's 2.5 MB do not fit a Dreamcast's heap, they do in the NAOMI's 32 MB),
+# a recording's chunk raised to 64 KB (NATIVE_MUSIC_CHUNK: its music is in main RAM) and NATIVE_NAOMI=1, and is built with the
 # KallistiOS tree for KOS_SUBARCH=naomi (KOS_NAOMI, default /opt/toolchains/dc/kos-naomi). Output:
 # OUTDIR/elf/naomi/bin/daytona-native-...-naomi-....bin.gz (the image for the WiPi netbooter) and the ELF beside it
 # (sh-elf-addr2line for the pc / pr of a HANG screen).
@@ -25,5 +27,5 @@ vars=(${(f)"$(grep -v '^#' $OUT/make-vars.txt)"})
 d=$OUT/elf/naomi
 rm -rf $d/obj; mkdir -p $d
 make -C $REPO/platform/dreamcast-native ENDJINN_ROOT=$ENDJINN_ROOT $vars NATIVE_RESIDENT_CAR=1 NATIVE_FRAME_PROFILE=1 \
-  NATIVE_HANDOPT=1 RACE_TICK_LIMIT=0 AUTO_START=attract NATIVE_SFX_VOICE_STREAM=1 NATIVE_SOUND_LOG=1 NATIVE_NAOMI=1 ENJ_BUILDDIR=$d/obj ENJ_BINDIR=$d/bin \
+  NATIVE_HANDOPT=1 RACE_TICK_LIMIT=0 AUTO_START=attract NATIVE_WORLD_STREAM_COURSES=7 NATIVE_MUSIC_CHUNK=65536 NATIVE_SFX_VOICE_STREAM=1 NATIVE_SOUND_LOG=1 NATIVE_NAOMI=1 ENJ_BUILDDIR=$d/obj ENJ_BINDIR=$d/bin \
   -j${JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu)} "$@" naomi

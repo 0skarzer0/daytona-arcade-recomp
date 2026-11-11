@@ -353,8 +353,8 @@ int main(void) {
     /* At a loading pause the whole load runs inside nm_sound_settle. */
     want(5, 0); frames(1); until_playing(40);
     want(7, 0); nm_sound_settle();
-    expect(sound.state == SOUND_PLAYING && sound.track == 7 && fake.cursor == 409166 && fake.read_max == 8192,
-           "settled load (state %d, chunks up to %u)", sound.state, fake.read_max);
+    expect(sound.state == SOUND_PLAYING && sound.track == 7 && fake.cursor == 409166 && fake.read_max == LOAD_CHUNK_MAX,
+           "settled load (state %d, chunks up to %u of %u)", sound.state, fake.read_max, (unsigned)LOAD_CHUNK_MAX);
 
     /* Too little AICA RAM for a recording's PCM8 bank and flow (Advanced's t04 beside the effects' bank): its ADPCM
      * copy in music/adpcm/ is loaded instead; without one the PCM8 load is tried as before. */

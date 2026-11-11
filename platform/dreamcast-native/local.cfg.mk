@@ -184,6 +184,15 @@ endif
 # meshes the frames walk, built in the idle wait for the PVR (code/audio/idle_wait.c); a mesh without them takes the
 # queue path, which submits the same words. 0: no cache (every world batch of those courses on the queue path).
 # ELF suffixes -wstreamsN when not 5, -wpoolN when not 458752.
+# NATIVE_MUSIC_CHUNK (default 8192; code/audio/sound.c NM_MUSIC_CHUNK): bytes of a recording read and uploaded to
+# the AICA in one idle wait, one a frame. Larger loads a piece sooner where the reads are fast (the NAOMI build:
+# its music is in main RAM) and costs that much more staging buffer. ELF suffix -chunkN when not 8192.
+NATIVE_MUSIC_CHUNK ?= 8192
+$(if $(shell [ "$(NATIVE_MUSIC_CHUNK)" -ge 512 ] 2>/dev/null && echo ok),,$(error NATIVE_MUSIC_CHUNK must be at least 512))
+ifneq ($(NATIVE_MUSIC_CHUNK),8192)
+ENJ_BASENAME := $(ENJ_BASENAME)-chunk$(NATIVE_MUSIC_CHUNK)
+ENJ_CFLAGS += -DNM_MUSIC_CHUNK=$(NATIVE_MUSIC_CHUNK)u
+endif
 NATIVE_WORLD_STREAM_COURSES ?= 5
 $(if $(filter 0 1 2 3 4 5 6 7,$(NATIVE_WORLD_STREAM_COURSES)),,$(error NATIVE_WORLD_STREAM_COURSES must be 0..7))
 ifneq ($(NATIVE_WORLD_STREAM_COURSES),5)

@@ -149,6 +149,32 @@ Rebuilding the banks after a change to `sfx-banks.txt` (the recipe's `sfx` step 
         --music build/my-assets/work/music/music --music-adpcm build/my-assets/work/music-adpcm/music
     cp .../sfx-new/sfx/{voices.pak,race.afb,race.dsx,banks.tsv} build/my-assets/assets-*/sfx/
 
+## Voices that cut in, the GAME OVER delay, Expert's tables (2026-11-11, 02:00)
+
+Three more from the cabinet, with the timings read live (`live.py ... log`).
+
+**A phrase now cuts the one playing.** Choosing a transmission while "PLEASE SELECT..." still spoke left the horn
+and the chosen name waiting for it. `sfx.c voice_update` now stops the playing instance as soon as the queued
+phrase is read and ready (`sfx.stats.voice_preempts`), as the announcer does on the original; a phrase that is not
+read yet still waits its turn.
+
+**The GAME OVER music was late because a recording loads 8 KB a frame.** Measured:
+
+    Sound log  97091 ms: want 0       (the race music stops)
+    Sound log 100798 ms: want 15      (3.7 s later: the game's own game-over sequence, not ours)
+    Sound log 101984 ms: play 15      (1,186 ms to load 505 KB)
+
+`LOAD_CHUNK_MAX` was 8192, sized for a read over dcload's `/pc`, and one chunk goes out an idle wait: about 480 KB
+a second at 60 fps. With the music in main RAM the reads cost nothing, so the build now sets
+`NATIVE_MUSIC_CHUNK=65536` (new option, `NM_MUSIC_CHUNK`; `load_chunk` still fits each read to the wait's budget
+from its measured speed, so a larger chunk only helps where the reads are fast). Measured after:
+**249 ms** for t02 and **310 ms** for t05 including its ADPCM fallback, against 1,186 ms before.
+The 3.7 s of silence before the request belongs to the game and is left alone.
+
+**Expert's prebuilt world tables are on** (`NATIVE_WORLD_STREAM_COURSES=7`): its 2.5 MB of submission records do
+not fit a Dreamcast's heap and do fit the NAOMI's 32 MB. No visual change, CPU only; 60 fps and 8.0 ms of rendering
+after it, 16.3 MB of heap still free.
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

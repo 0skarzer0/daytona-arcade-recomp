@@ -108,7 +108,15 @@ enum { LOAD_BANK_OPEN, LOAD_BANK_HEADER, LOAD_ROOM, LOAD_BANK, LOAD_FLOW_OPEN, L
      , LOAD_BANK_SEEK /* after an odd header: the seek is a worker call of its own */
 #endif
 };
-#define LOAD_CHUNK_MAX 8192u  /* bytes: the staging buffer, and the largest read (a step at a pause: ~26 ms over /pc) */
+/* Bytes of the staging buffer, and the largest read and AICA upload of one idle wait: one goes out a frame, so it
+ * sets how fast a recording loads (8192 = about 480 KB a second at 60 fps). Sized for a read over dcload's /pc;
+ * load_chunk fits the read to the wait's budget from its measured speed, so a larger one only helps where the reads
+ * are fast. make NATIVE_MUSIC_CHUNK=N to change it (the NAOMI build reads its music from main RAM and uses 65536:
+ * GAME OVER took 1,186 ms to start on the cabinet, 2026-11-11). */
+#ifndef NM_MUSIC_CHUNK
+#define NM_MUSIC_CHUNK 8192u
+#endif
+#define LOAD_CHUNK_MAX NM_MUSIC_CHUNK
 #define LOAD_READ_STEP 512u   /* reads in whole steps (all of the rest when it fits) */
 /* The flow's upload is one synchronous AICAflow call (a PIO copy: 254,681 bytes took 42.6 ms on hardware). */
 #define LOAD_UPLOAD_BYTES_PER_MS 5000u

@@ -628,6 +628,15 @@ static void voice_update(void) {
         }
     }
     if (voice.stage == VOICE_UPLOADING) voice_upload_step();
+    /* A phrase that is ready cuts the one playing, as the announcer does on the original: the select screens ask
+     * for the chosen course or transmission while "PLEASE SELECT..." is still speaking, and waiting for it made
+     * them queue up and pushed GENTLEMEN START YOUR ENGINES late (NAOMI cabinet, 2026-11-11). Only a phrase that
+     * can start at once preempts: an unread one waits its turn as before. */
+    if (voice.queued && voice.stage == VOICE_PLAYING && voice_cached(voice.queue[0], SLOT_READY) >= 0) {
+        (void)afx_instance_stop(voice.instance);
+        voice.stage = VOICE_ENDED;
+        ++sfx.stats.voice_preempts;
+    }
     if (voice.queued) {
         const int slot = voice_cached(voice.queue[0], SLOT_READY);
         if (slot >= 0 && voice.stage == VOICE_IDLE) voice_upload_begin((unsigned)slot);
