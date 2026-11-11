@@ -209,6 +209,24 @@ after it, 16.3 MB of heap still free.
   the parent set `daytona`; `build_sfx.sh` then fails. A zip with both added from `daytona.zip` builds byte-identical
   effects (sfx-expected.sha256: 5 of 5).
 
+## Next: a release with Daytona2Naomi.exe (asked for 2026-11-11, not started)
+
+The owner wants the first release to be a Windows console program, `Daytona2Naomi.exe`, that you drag a ROM set zip
+onto and that leaves a `.bin.gz` beside it. Nothing ROM-derived may ship in the release, so the program has to run
+the conversion on the user's machine, and the recipe's tools (Clang, CMake, python with numpy and Pillow, the
+AICAflow tools, zsh) have no Windows build: the program will drive them through WSL. Plan agreed so far:
+
+- ship the **program binary already wrapped in its NAOMI header** (`...-naomi-prog.bin`, about 1.4 MB, built by
+  `naomibintool` from our ELF: our own code, not ROM-derived). Then the user's machine needs no KallistiOS and no
+  sh-elf toolchain at all — only `pvrtex`, a small host utility of KOS's `utils/`, for the sky, title and finish
+  textures;
+- a one-command `naomi/build_from_rom.sh`: apt dependencies, `scripts/setup.py --no-build`, the CMake host build
+  (Clang: GCC refuses `m2segment`), `recipes/build_assets.sh`, then `naomi/naomi_pack.py` and gzip;
+- `Daytona2Naomi.exe` in Go (cross-compiled, no runtime to install): takes the zips dropped on it, tells a ROM set
+  from the vgmrips music pack by their contents, merges `daytona93` with the parent set's sound program when both
+  are given, finds WSL, runs the script, copies the `.bin.gz` back beside the zip and reports progress.
+  First run on a user's machine is long (about two hours of CPU here).
+
 ## Not done
 
 - A credit counter and the cabinet's rule for the other games (START + brake = a credit, besides the coin; no free
