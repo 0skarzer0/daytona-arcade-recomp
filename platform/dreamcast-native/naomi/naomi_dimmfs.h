@@ -26,6 +26,10 @@ int dimmfs_cache(const char *name);
 /* A file's size (path inside /dimm), -1 when there is none. */
 int dimmfs_size(const char *name);
 
+/* The lock of the cartridge port (naomi_dimmcomms.c answers the NetDIMM under it too). */
+void dimmfs_lock(void);
+void dimmfs_unlock(void);
+
 /* Non-zero once /dimm is mounted */
 int dimmfs_mounted(void);
 

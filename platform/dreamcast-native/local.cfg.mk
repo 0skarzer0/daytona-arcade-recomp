@@ -29,7 +29,7 @@ ENJ_CFLAGS += -DNM_NAOMI
 # The port's sources (and SH4ZAM's use in them) test __DREAMCAST__ for "the SH-4 console, not the host"; KOS defines
 # __NAOMI__ instead on a NAOMI. Same CPU, PVR and AICA: defined here too (KOS's own headers do not test it).
 ENJ_CFLAGS += -D__DREAMCAST__
-NAOMI_OBJS := $(addprefix $(ENJ_BUILDDIR)/naomi/,naomi_log.o naomi_input.o naomi_save.o naomi_dimmfs.o)
+NAOMI_OBJS := $(addprefix $(ENJ_BUILDDIR)/naomi/,naomi_log.o naomi_input.o naomi_save.o naomi_dimmfs.o naomi_dimmcomms.o)
 OBJS += $(NAOMI_OBJS)
 $(NAOMI_OBJS): DEFINES += -fno-lto
 $(ENJ_BUILDDIR)/enDjinn/code/enj_ctrl.o: DEFINES += -fno-lto

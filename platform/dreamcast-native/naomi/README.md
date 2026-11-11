@@ -75,6 +75,25 @@ lines (`naomi-ring` dbgio device). The lines are shown on a blue screen when:
 - no frame has been rendered for 15 s (90 s before the first frame): `HANG`, with the main thread's pc and pr for
   `sh-elf-addr2line -e daytona-native-naomi*.elf`.
 
+## Reading the board while it runs (NetDIMM peeks)
+
+`naomi_dimmcomms.c` answers the NetDIMM's peek / poke requests (libnaomi's protocol, as dc2naomi's resident does),
+so the netbooter Raspberry can read the board's memory while the game runs. On top of it, `nm_naomi_live` is a block
+of live figures refreshed once a second (layout in `naomi.h`): frames rendered in the last second, the worst second,
+frame and render times, and the address of the console's ring. Its address is in the console's line
+"NAOMI: NetDIMM peek/poke on; live figures at 0x8c......" and in `sh-elf-nm ELF | grep _nm_naomi_live`.
+
+On the Raspberry (DragonMinded's `netdimm.py` in `/sbin/piforce/dm_netboot`, as on the WiPi):
+
+```sh
+python3 live.py 10.0.0.4 0x8c173164 fps 60    # one line a second: fps, worst second, frame / render ms
+python3 live.py 10.0.0.4 0x8c173164 log       # the whole console ring (what TEST shows, unfiltered)
+python3 live.py 10.0.0.4 0x8c173164 reset     # start the worst second over
+```
+
+(0x8c173164 is the address in the build of 2026-11-11; it moves with every build.) Any other address of the RAM can
+be read with 0skarzer0/dc2naomi's `tools/board/pk.py`.
+
 ## Building
 
 Two KallistiOS trees at the port's pin (`368a2eb9`): `/opt/toolchains/dc/kos` for the Dreamcast (the recipe and its

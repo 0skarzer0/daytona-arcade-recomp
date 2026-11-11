@@ -93,6 +93,15 @@ a load silently when the game wants another piece before it ends ("a change of m
 - `NATIVE_SOUND_LOG=1` in `build_naomi.sh`: a console line for every music request, start and end ("Sound log",
   shown by TEST), to confirm the cause if Beginner is still silent.
 
+## NetDIMM peeks (2026-11-11)
+
+The owner asked to measure on the board through the NetDIMM (as dc2naomi does: Raspberry 192.168.68.60, NetDIMM
+10.0.0.4, credentials only in the chat). A KallistiOS program does not answer peeks, so: `naomi_dimmcomms.c` (a 2 ms
+polling thread, under the cartridge port's lock) and `nm_naomi_live` + `live.py` (fps, worst second, frame / render
+times, the console ring). Image built, not yet on the board; `_nm_naomi_live` at 0x8c173164 in it. First things to
+measure: fps in a full race start on each course (the anti-aliasing question: is there headroom?), Beginner's music
+log (`live.py ... log`).
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

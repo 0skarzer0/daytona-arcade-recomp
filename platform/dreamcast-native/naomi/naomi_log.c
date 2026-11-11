@@ -31,7 +31,7 @@ static uintptr_t heap_left(void) {
 #define HANG_S 15             /* then: no rendered frame for this long */
 
 static char lines[LOG_LINES][LOG_WIDTH];
-static unsigned line_count;   /* lines started */
+static volatile unsigned line_count; /* lines started (peeked at through nm_naomi_live) */
 static unsigned column;       /* in the current line */
 static volatile int pvr_up;
 static kthread_t *main_thread;
@@ -176,6 +176,12 @@ int nm_naomi_boot(void) {
         if (a > 0 && b > 0) { cached += a + b; ++pieces; }
     }
     printf("NAOMI: music in RAM: %u pieces, %ld bytes; heap left %lu\n", pieces, cached, (unsigned long)heap_left());
+    nm_naomi_live.log_lines = (uint32_t)(uintptr_t)lines;
+    nm_naomi_live.log_count = LOG_LINES;
+    nm_naomi_live.log_width = LOG_WIDTH;
+    nm_naomi_live.log_next = (uint32_t)(uintptr_t)&line_count;
+    nm_naomi_live.heap_left = (uint32_t)heap_left();
+    nm_naomi_dimmcomms_start();
     const kthread_attr_t attributes = {.create_detached = true, .stack_size = 8192, .label = "naomi watchdog",
                                        .prio = PRIO_DEFAULT - 1};
     if (!thd_create_ex(&attributes, watchdog, NULL)) printf("NAOMI: no watchdog thread\n");

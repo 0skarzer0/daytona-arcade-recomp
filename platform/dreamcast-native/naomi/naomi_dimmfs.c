@@ -308,3 +308,6 @@ int dimmfs_size(const char *name)
     const dimmfs_entry_t *e = mounted ? find(name) : NULL;
     return e ? (int)e->size : -1;
 }
+
+void dimmfs_lock(void) { mutex_lock(&lock); }
+void dimmfs_unlock(void) { mutex_unlock(&lock); }
