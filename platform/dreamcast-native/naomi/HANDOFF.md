@@ -130,6 +130,25 @@ at 15-22 ms against a 16.67 ms budget — over it at the peaks of a race. 16.3 M
 video RAM are free (KOS sees the NAOMI's 16 MB of video RAM, not a Dreamcast's 8), so the room is in memory, not in
 fill rate.
 
+## The select screens' horn (2026-11-11, 01:40)
+
+On the cabinet the confirmation horn and the spoken course or transmission name played one after the other, where
+the original plays them together, and GENTLEMEN START YOUR ENGINES then arrived late. Cause: **only one streamed
+phrase plays at a time** (`sfx.c voice_update`: a queued phrase waits for `VOICE_IDLE`), and the select voices added
+here on 2026-11-06 made the horn one of them. Fix: the horn `ae2158` moved to the resident `race` bank
+(`recipes/sfx-banks.txt`), where it mixes like any effect; the spoken names stay streamed. The bank grows from
+481,486 to 518,816 bytes of AICA RAM, which no longer fits beside a PCM8 t03, so `build_sfx.sh` takes a new
+`--music-adpcm DIR`: with an ADPCM copy of t03 there, the bank is measured against that copy, since `sound.c` falls
+back to it. On a NAOMI the PCM8 t03 is never loaded anyway (the arena is too fragmented, above), so nothing is lost
+here; on a Dreamcast the flag would cost Beginner's music its PCM8 quality, so it is opt-in. Built and sent to the
+board; the horn itself still to be heard.
+
+Rebuilding the banks after a change to `sfx-banks.txt` (the recipe's `sfx` step is stamped):
+
+    zsh platform/dreamcast-native/recipes/build_sfx.sh roms/daytona93-full.zip build/my-assets/work/sfx-new \
+        --music build/my-assets/work/music/music --music-adpcm build/my-assets/work/music-adpcm/music
+    cp .../sfx-new/sfx/{voices.pak,race.afb,race.dsx,banks.tsv} build/my-assets/assets-*/sfx/
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

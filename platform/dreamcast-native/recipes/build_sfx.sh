@@ -2,12 +2,18 @@
 # The original's sound effects and voices as AICAflow assets: one AFB sample bank and one .dsx (index, engine tables,
 # control flows) per bank of sfx-banks.txt.
 #
-#   zsh platform/dreamcast-native/recipes/build_sfx.sh ROMSET.zip OUTDIR [--aicaflow DIR] [--music DIR] [--voices MODE]
+#   zsh platform/dreamcast-native/recipes/build_sfx.sh ROMSET.zip OUTDIR [--aicaflow DIR] [--music DIR]
+#       [--music-adpcm DIR] [--voices MODE]
 #
 # ROMSET.zip  the daytona93 set (MAME layout) with its sound ROMs: epr-16720/16721 (the 68000 program, Revision A's,
 #             as MAME's set has it) and mpr-16491..16494 (the MultiPCM samples), checked by CRC.
 # OUTDIR      output directory (keep it under the ignored build/); OUTDIR/sfx is made from scratch on every run.
 # --aicaflow DIR  AICAflow checkout with AICAforge (default: extern/aicaflow from platform/dreamcast-native/scripts/fetch_aicaflow.sh).
+# --music-adpcm DIR the music/ of build_music.sh --adpcm: with an ADPCM copy of t03 there, the race bank is measured
+#             against that copy instead of the PCM8 t03, because code/audio/sound.c falls back to it when the PCM8
+#             one does not fit. It buys room in the resident bank and costs Beginner's race music its PCM8 quality,
+#             so pass it only where the PCM8 t03 would not be loaded anyway: on a NAOMI it never is, the streamed
+#             phrases leave the AICA arena too fragmented for a block that size (naomi/HANDOFF.md, 2026-11-11).
 # --music DIR the music/ of build_music.sh: the race bank must fit next to its race recording t03; without it the
 #             check uses t03's PCM8 size (1,561,766 bytes with its flow).
 # --voices MODE  the announcer's phrases of sfx-banks.txt's "voices" line (ADPCM): stream (default) writes
@@ -46,11 +52,12 @@ RACE_MUSIC_DEFAULT=1561766
 usage() { sed -n '2,32p' $SELF | sed 's/^# \{0,1\}//'; exit 2; }
 (( $# >= 2 )) || usage
 ROMSET=${1:A}; OUT=${2:A}; shift 2
-AF=$REPO/extern/aicaflow; MUSIC=""; VOICES=stream
+AF=$REPO/extern/aicaflow; MUSIC=""; MUSIC_ADPCM=""; VOICES=stream
 while (( $# )); do
   case $1 in
     --aicaflow) AF=${2:A}; shift;;
     --music) MUSIC=${2:A}; shift;;
+    --music-adpcm) MUSIC_ADPCM=${2:A}; shift;;
     --voices) VOICES=$2; [[ $VOICES == (stream|resident|none) ]] || usage; shift;;
     *) usage;;
   esac
@@ -122,6 +129,11 @@ race_music=$RACE_MUSIC_DEFAULT
 if [[ -n $MUSIC ]]; then
   [[ -f $MUSIC/t03.afb && -f $MUSIC/t03.afx ]] || { print -u2 -r -- "no t03.afb/t03.afx in $MUSIC"; exit 2; }
   race_music=$(( $(zstat +size $MUSIC/t03.afb) - 32 + $(zstat +size $MUSIC/t03.afx) ))
+fi
+if [[ -n $MUSIC_ADPCM ]]; then
+  [[ -f $MUSIC_ADPCM/t03.afb && -f $MUSIC_ADPCM/t03.afx ]] || { print -u2 -r -- "no t03.afb/t03.afx in $MUSIC_ADPCM"; exit 2; }
+  race_music=$(( $(zstat +size $MUSIC_ADPCM/t03.afb) - 32 + $(zstat +size $MUSIC_ADPCM/t03.afx) ))
+  print -r -- "   race music budget: t03 in ADPCM ($race_music), not PCM8"
 fi
 print -r -- $'bank\tflows\tafb_bytes\taica_bytes\tleft_beside_race_music' > $OUT/sfx/banks.tsv
 for bank in $banks; do
