@@ -102,6 +102,34 @@ times, the console ring). Image built, not yet on the board; `_nm_naomi_live` at
 measure: fps in a full race start on each course (the anti-aliasing question: is there headroom?), Beginner's music
 log (`live.py ... log`).
 
+## Measured on the cabinet through the NetDIMM (2026-11-11, 01:20)
+
+First run read live from the Raspberry (`live.py`, peeks answered by `naomi_dimmcomms.c`): it works, and both open
+questions are answered.
+
+**Beginner's music plays.** The log of a Beginner race (course 0, automatic):
+
+    Sound log 261202 ms: want 3 (state 2, resident 2)
+    Sound: track 03 does not fit in PCM8 (bank 1307072, with flow 1561760; AICA free 1572512, largest b...
+    Sound log 262064 ms: play 3 (state 1, resident 3)
+
+So t03's PCM8 bank (1,307,072 bytes) is larger than the **largest free block**, though the free bytes (1,572,512)
+would hold the whole piece (1,561,760): the AICA arena is **fragmented**, not full. The streamed phrases allocate
+and free their samples in it (the select screens' ones among them, added here on 2026-11-06), and what is left is
+split. Upstream never meets this because Advanced and Expert always take their ADPCM copies and Beginner's PCM8 is
+loaded before much has been streamed. The fallback added here (an ADPCM copy of t03) is what makes it play, 862 ms
+after the request. The earlier silence was this check falling back to a copy that did not exist.
+A better fix, for the day someone wants Beginner's music in PCM8 again: a fixed AICA slot for the streamed phrases
+(reserved once, at one end of the arena) instead of an allocation a phrase.
+
+**60 fps, with about 6 ms a frame to spare.** `live.py ... fps`: 60 fps (59 when a second straddles a vblank) in
+the attract and in a race on course 0, frame 16.67 ms throughout. Rendering: 5.6-9.4 ms in the attract,
+7.7-11.3 ms in a race. `worst` 10-11 fps only at boot, while the music is copied into RAM.
+So **the anti-aliasing the owner asked about would not hold**: it doubles the pixels to fill, which puts rendering
+at 15-22 ms against a 16.67 ms budget — over it at the peaks of a race. 16.3 MB of main RAM and about 10.8 MB of
+video RAM are free (KOS sees the NAOMI's 16 MB of video RAM, not a Dreamcast's 8), so the room is in memory, not in
+fill rate.
+
 ## What to test on the cabinet, in this order
 
 1. Boot: the attract (cinematic, V.R. demo, title) at 60 frames/s, with music. A blue screen instead means the log

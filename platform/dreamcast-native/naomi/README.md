@@ -94,6 +94,14 @@ python3 live.py 10.0.0.4 0x8c173164 reset     # start the worst second over
 (0x8c173164 is the address in the build of 2026-11-11; it moves with every build.) Any other address of the RAM can
 be read with 0skarzer0/dc2naomi's `tools/board/pk.py`.
 
+Sending an image to the board from the Raspberry, without touching the WiPi's menu:
+
+```sh
+pkill -f timehack.py                                    # it keeps the NetDIMM alive; it holds the link meanwhile
+cd /sbin/piforce/dm_netboot && python3 netdimm_send 10.0.0.4 /boot/roms/IMAGE.bin.gz --disable-crc
+nohup python3 /sbin/piforce/timehack.py 10.0.0.4 &      # back on, or the board resets with "error 33"
+```
+
 ## Building
 
 Two KallistiOS trees at the port's pin (`368a2eb9`): `/opt/toolchains/dc/kos` for the Dreamcast (the recipe and its
