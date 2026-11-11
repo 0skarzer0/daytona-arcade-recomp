@@ -1,7 +1,7 @@
 # The native port on a SEGA NAOMI / NAOMI 2
 
 `make ... NATIVE_NAOMI=1 naomi` builds the native Dreamcast port (`platform/dreamcast-native`, the game rewritten in C
-for the SH-4) as a netboot image for a NAOMI or NAOMI 2 with a NetDIMM. The NAOMI has the Dreamcast's SH-4, PVR2 and
+for the SH-4, by dfchil and alphanu1: see [Acknowledgements](#acknowledgements)) as a netboot image for a NAOMI or NAOMI 2 with a NetDIMM. The NAOMI has the Dreamcast's SH-4, PVR2 and
 AICA, so the game, its renderer and its sound run unchanged; this directory supplies what the board does not have.
 
 Target hardware it was written for: a Crazy Taxi upright (wheel, accelerator, brake, a two-way shifter, START, 31 kHz
@@ -125,3 +125,36 @@ tools, memory for the lockstep checks).
 ## Status
 
 See `HANDOFF.md` in this directory: what was built, what was measured on the cabinet, what failed.
+
+## Acknowledgements
+
+This directory only adapts other people's work to a different board; everything below made it possible, directly or as
+inspiration. Licences and pinned versions are in [`../THIRD_PARTY.md`](../THIRD_PARTY.md).
+
+- **alphanu1**, author of [daytona-arcade-recomp](https://github.com/alphanu1/daytona-arcade-recomp): the project this
+  branch lives in, the Model 2 recompilation that the native port is checked against bit for bit, and the answer to
+  issue #62 that pointed at the native port.
+- **dfchil**, author of the native SH-4 port this branch builds (PR #58) and of
+  [enDjinn](https://github.com/dfchil/enDjinn), [AICAflow](https://github.com/dfchil/aicaflow) and
+  [AICAforge](https://github.com/dfchil/AICAforge), which the port's rendering, input and sound run on. The NAOMI build
+  changes almost nothing of it: it is their game, running on another board.
+- **DragonMinded**: [libnaomi](https://github.com/DragonMinded/libnaomi), whose cartridge-port reads
+  (`naomi_dimmfs.c`) and NetDIMM peek / poke protocol (`naomi_dimmcomms.c`) this follows, and the NetDIMM tools
+  (`netdimm.py`, `netdimm_send`) that load the image and that `live.py` uses to read the board while the game runs.
+- **The KallistiOS team and contributors**: KallistiOS, its NAOMI subarchitecture (`KOS_SUBARCH=naomi`),
+  `naomibintool` (the ROM header of the image) and `kos-chain`, without which there is no ELF to boot.
+- **The GNU binutils, GCC and newlib projects**, which make up the `sh-elf` toolchain built for this branch.
+- **gyrovorbis**, author of [SH4ZAM](https://github.com/gyrovorbis/sh4zam), linked into the port.
+- **The vgmrips community**, whose Daytona USA (Sega Model 2) music pack is what the port plays.
+- **The Raspberry Pi netbooter** that boots the board: the WiPi Netbooter (its `/sbin/piforce` tools) and the Piforce /
+  [Piforce-Web](https://github.com/dev-tty0/Piforce-Web) line of work, which builds on debugmode's Triforce tools.
+  Without it nothing here could be tried on the cabinet.
+- **Cannonball** (Chris White) and its Dreamcast / NAOMI port, with which this port shares the board's SRAM.
+- **[0skarzer0/dc2naomi](https://github.com/0skarzer0/dc2naomi)**, whose resident and `tools/board/pk.py` found the
+  NetDIMM's quirks that `naomi_dimmcomms.c` takes into account.
+- **Claude** (Anthropic), through Claude Code: the NAOMI adaptation in this directory (the `/dimm` file system, the JVS
+  controls, the SRAM save, the console and hang screen, the music and voice fixes, the live figures) was written and
+  debugged by Claude in sessions with 0skarzer0, who owns the cabinet, ran every image on it, and sent the photos and
+  measurements that every diagnosis here came from.
+
+If you contributed to something that is used here and are not named, please open an issue or a pull request.

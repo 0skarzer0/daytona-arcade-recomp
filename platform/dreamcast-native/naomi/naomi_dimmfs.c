@@ -12,7 +12,8 @@
                  uint32   offset    from the start of the archive
                  uint32   size      in bytes
 
-    Reading the cartridge port (as libnaomi does): write the low 16 bits of
+    Reading the cartridge port (as DragonMinded's libnaomi does, https://github.com/DragonMinded/libnaomi:
+    the sequence is theirs, reimplemented here on KallistiOS): write the low 16 bits of
     the address to 0xA05F7004, then the high bits with bit 15 set (auto
     increment) to 0xA05F7000, then read 16-bit words from 0xA05F7008.
 ***************************************************************************/
