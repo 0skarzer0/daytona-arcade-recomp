@@ -97,7 +97,7 @@ a load silently when the game wants another piece before it ends ("a change of m
 
 The owner asked to measure on the board through the NetDIMM (as dc2naomi does: Raspberry 192.168.68.60, NetDIMM
 10.0.0.4, credentials only in the chat). A KallistiOS program does not answer peeks, so: `naomi_dimmcomms.c` (a 2 ms
-polling thread, under the cartridge port's lock) and `nm_naomi_live` + `live.py` (fps, worst second, frame / render
+polling thread, under the cartridge port's lock) and `nm_naomi_live` + `live.py` (now [naomi-pi-tools](https://github.com/0skarzer0/naomi-pi-tools)' `pi/live.py`) (fps, worst second, frame / render
 times, the console ring). Image built, not yet on the board; `_nm_naomi_live` at 0x8c173164 in it. First things to
 measure: fps in a full race start on each course (the anti-aliasing question: is there headroom?), Beginner's music
 log (`live.py ... log`).

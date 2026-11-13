@@ -83,7 +83,9 @@ of live figures refreshed once a second (layout in `naomi.h`): frames rendered i
 frame and render times, and the address of the console's ring. Its address is in the console's line
 "NAOMI: NetDIMM peek/poke on; live figures at 0x8c......" and in `sh-elf-nm ELF | grep _nm_naomi_live`.
 
-On the Raspberry (DragonMinded's `netdimm.py` in `/sbin/piforce/dm_netboot`, as on the WiPi):
+On the Raspberry (DragonMinded's `netdimm.py` in `/sbin/piforce/dm_netboot`, as on the WiPi), with `live.py` from
+[naomi-pi-tools](https://github.com/0skarzer0/naomi-pi-tools/blob/main/pi/live.py), the one reader of every project
+(it recognises this port's `NEST` block; until 2026-11-13 it was a copy in this folder):
 
 ```sh
 python3 live.py 10.0.0.4 0x8c173164 fps 60    # one line a second: fps, worst second, frame / render ms
