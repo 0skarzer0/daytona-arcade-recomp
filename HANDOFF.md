@@ -913,7 +913,7 @@ planned, all off, so the default stays native speed, 57.52 frames/s), #9
 #10 (reference audio's mix matches MAME; native audio's master gain 1.95 and
 missing sample envelopes) and #6.
 
-**Dreamcast port (in progress; on main since PR #11).** Now about 32 frames/s in
+**Dreamcast port (recompiled; removed 2026-11-13, see tag `dreamcast-recompiled-final`; the text below describes it as it was, and `platform/dreamcast/` paths no longer exist; the M2_DC_* runtime defines remain, unused).** Now about 32 frames/s in
 Flycast (reported 2026-10-06; the work behind it is not on main yet, so the
 measurements below stop at the older figures). platform/dreamcast: a
 KallistiOS build run by platform/dreamcast/build_dreamcast.py after the
