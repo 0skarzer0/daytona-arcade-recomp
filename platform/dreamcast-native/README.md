@@ -6,7 +6,7 @@ program.
 
 ## How it differs from `platform/dreamcast`
 
-> `platform/dreamcast` (the recompiled port) was removed on 2026-11-13, now that this native port works on a console. It stays in git history under the tag `dreamcast-recompiled-final`.
+> `platform/dreamcast` (the recompiled port) was removed on 2026-11-13, now that this native port works on a console. It stays in git history in git history: its last commit is `b9fda30` (`git show b9fda30:platform/dreamcast/README.md`).
 
 `platform/dreamcast` runs this repository's recompiled i960/TGP code on the
 Dreamcast, built from the Revision A set. It reaches about 32 frames/s in
