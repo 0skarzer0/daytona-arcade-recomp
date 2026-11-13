@@ -1,4 +1,9 @@
-# Sega Dreamcast port (in progress)
+# Sega Dreamcast port (recompiled) - unmaintained, kept for reference only
+
+> **No longer maintained (2026-11-13).** The native port ([../dreamcast-native](../dreamcast-native/README.md))
+> appeared later, runs at 60 frames/s on a console and is the one to use. This recompiled port stays here only as
+> a reference (a behaviour oracle for the native one, and a record of how far recompiling got: about 32 frames/s in
+> Flycast). Nothing new is planned for it. It may be removed once the native port has passed full tests on the board.
 
 The recompiled game on a Dreamcast (SH-4 at 200 MHz, 16 MB main RAM, 8 MB
 video RAM, 2 MB sound RAM), built with KallistiOS. Like `platform/vita`, this
